@@ -53,7 +53,7 @@ Lưu ý
 - Đây là demo cơ bản. Khi triển khai thực tế, cần bảo mật token và sử dụng refresh token.
 
 
-/fontend
+/src
   /components
     - Login.jsx         // Form đăng nhập
     - Register.jsx      // Form đăng ký
@@ -65,7 +65,7 @@ Lưu ý
   - App.jsx             // Routes và logic chính
   - main.jsx           // Entry point
 
-/backend
+/server
   /routes
     - auth.js          // API đăng nhập/đăng ký
   /models
