@@ -1,0 +1,46 @@
+# =========================
+# Backend
+# =========================
+backend/node_modules/
+backend/.env
+backend/dist/
+backend/logs/
+backend/*.log
+
+# =========================
+# Frontend
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.local
+
+# =========================
+# Root-level ignore
+# =========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs (root)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# System files
+.DS_Store
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
