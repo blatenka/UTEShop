@@ -1,15 +1,19 @@
 import { useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../redux/slices/authSlice";
 import "../styles/Profile.css";
 
-function Profile({ user, onLogout }) {
+function Profile({ onLogout }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, loading } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
-    onLogout();
+    dispatch(logout());
     navigate("/");
   };
 
-  if (!user) {
+  if (loading || !user) {
     return <div className="loading">Loading...</div>;
   }
 

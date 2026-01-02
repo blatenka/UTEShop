@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { forgotPassword, resetPassword, clearError, clearSuccess } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
 
 function ForgotPassword() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error, success } = useSelector((state) => state.auth);
+  
   const [step, setStep] = useState(1); // 1: email, 2: OTP, 3: new password
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [localError, setLocalError] = useState("");
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -16,86 +19,52 @@ function ForgotPassword() {
 
   const handleRequestOTP = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setLocalError("");
 
     if (!email) {
-      setError("Please enter your email");
+      setLocalError("Please enter your email");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("OTP sent to your email! Check console for OTP (dev mode)");
+    dispatch(forgotPassword(email)).then((result) => {
+      if (result.type === forgotPassword.fulfilled.type) {
         setStep(2);
-      } else {
-        setError(data.message || "Failed to request OTP");
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setLocalError("");
 
     if (!otp || !newPassword) {
-      setError("Please fill all fields");
+      setLocalError("Please fill all fields");
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+      setLocalError("Password must be at least 6 characters");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords don't match");
+      setLocalError("Passwords don't match");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          otp,
-          newPassword,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("Password reset successful! Redirecting to login...");
+    dispatch(
+      resetPassword({
+        email,
+        otp,
+        newPassword,
+      })
+    ).then((result) => {
+      if (result.type === resetPassword.fulfilled.type) {
         setTimeout(() => {
           navigate("/login");
         }, 2000);
-      } else {
-        setError(data.message || "Reset failed");
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -103,7 +72,7 @@ function ForgotPassword() {
       <div className="auth-card">
         <h1>Reset Password</h1>
 
-        {error && <div className="error-message">{error}</div>}
+        {(error || localError) && <div className="error-message">{error || localError}</div>}
         {success && <div className="success-message">{success}</div>}
 
         {step === 1 ? (

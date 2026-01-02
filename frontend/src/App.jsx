@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { getProfile, logout } from "./redux/slices/authSlice";
 import "./App.css";
 
 // Pages
@@ -10,67 +12,33 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { isLoggedIn, user, loading } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Check token on page load
+    // Fetch profile on page load if token exists
     const token = localStorage.getItem("token");
-    if (token) {
-      fetchProfile(token);
-    } else {
-      setLoading(false);
+    if (token && !user) {
+      dispatch(getProfile());
     }
-  }, []);
-
-  const fetchProfile = async (token) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setIsLoggedIn(true);
-      } else {
-        localStorage.removeItem("token");
-        setIsLoggedIn(false);
-      }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-      localStorage.removeItem("token");
-      setIsLoggedIn(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = (token, userData) => {
-    localStorage.setItem("token", token);
-    setUser(userData);
-    setIsLoggedIn(true);
-  };
+  }, [dispatch, user]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    setIsLoggedIn(false);
+    dispatch(logout());
   };
 
-  if (loading) {
+  if (loading && !user) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />} />
-        <Route path="/register" element={isLoggedIn ? <Navigate to="/profile" /> : <Register onSuccess={handleLogin} />} />
-        <Route path="/login" element={isLoggedIn ? <Navigate to="/profile" /> : <Login onSuccess={handleLogin} />} />
+        <Route path="/" element={<Home onLogout={handleLogout} />} />
+        <Route path="/register" element={isLoggedIn ? <Navigate to="/profile" /> : <Register />} />
+        <Route path="/login" element={isLoggedIn ? <Navigate to="/profile" /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/profile" element={isLoggedIn ? <Profile user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/profile" element={isLoggedIn ? <Profile onLogout={handleLogout} /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );

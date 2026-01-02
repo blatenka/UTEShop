@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { requestOtp, register, clearError, clearSuccess } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
 
-function Register({ onSuccess }) {
+function Register() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error, success } = useSelector((state) => state.auth);
+  
   const [step, setStep] = useState(1); // 1: fill info, 2: verify OTP
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [localError, setLocalError] = useState("");
 
   // Step 1: Form data
   const [formData, setFormData] = useState({
@@ -31,89 +34,55 @@ function Register({ onSuccess }) {
 
   const handleRequestOTP = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setLocalError("");
 
     // Validation
     if (!formData.email || !formData.name || !formData.username || !formData.password) {
-      setError("Please fill all required fields");
+      setLocalError("Please fill all required fields");
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setLocalError("Password must be at least 6 characters");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match");
+      setLocalError("Passwords don't match");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/auth/request-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("OTP sent to your email! Check console for OTP (dev mode)");
+    dispatch(requestOtp(formData.email)).then((result) => {
+      if (result.type === requestOtp.fulfilled.type) {
         setStep(2);
-      } else {
-        setError(data.message || "Failed to request OTP");
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setLocalError("");
 
     if (!otp) {
-      setError("Please enter OTP");
+      setLocalError("Please enter OTP");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          otp: otp,
-          password: formData.password,
-          name: formData.name,
-          username: formData.username,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("Registration successful! Redirecting to login...");
+    dispatch(
+      register({
+        email: formData.email,
+        otp: otp,
+        password: formData.password,
+        name: formData.name,
+        username: formData.username,
+      })
+    ).then((result) => {
+      if (result.type === register.fulfilled.type) {
         setTimeout(() => {
           navigate("/login");
         }, 2000);
-      } else {
-        setError(data.message || "Registration failed");
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -121,7 +90,7 @@ function Register({ onSuccess }) {
       <div className="auth-card">
         <h1>Create Account</h1>
 
-        {error && <div className="error-message">{error}</div>}
+        {(error || localError) && <div className="error-message">{error || localError}</div>}
         {success && <div className="success-message">{success}</div>}
 
         {step === 1 ? (
@@ -220,7 +189,7 @@ function Register({ onSuccess }) {
               onClick={() => {
                 setStep(1);
                 setOtp("");
-                setError("");
+                setLocalError("");
               }}
             >
               ← Back

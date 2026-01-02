@@ -1,11 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../redux/slices/authSlice";
 import "../styles/Home.css";
 
-function Home({ isLoggedIn, user, onLogout }) {
+function Home({ onLogout }) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { isLoggedIn, user } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
-    onLogout();
+    dispatch(logout());
     navigate("/");
   };
 

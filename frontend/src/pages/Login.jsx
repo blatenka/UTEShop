@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { login } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
 
-function Login({ onSuccess }) {
+function Login() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.auth);
+  
+  const [localError, setLocalError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,35 +25,18 @@ function Login({ onSuccess }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
+    setLocalError("");
 
     if (!formData.email || !formData.password) {
-      setError("Please fill all fields");
+      setLocalError("Please fill all fields");
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        onSuccess(data.token, data.user);
+    dispatch(login(formData)).then((result) => {
+      if (result.type === login.fulfilled.type) {
         navigate("/profile");
-      } else {
-        setError(data.message || "Login failed");
       }
-    } catch (error) {
-      setError("Network error. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -57,7 +44,7 @@ function Login({ onSuccess }) {
       <div className="auth-card">
         <h1>Login</h1>
 
-        {error && <div className="error-message">{error}</div>}
+        {(error || localError) && <div className="error-message">{error || localError}</div>}
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
