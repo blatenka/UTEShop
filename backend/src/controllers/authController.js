@@ -2,7 +2,10 @@ import User from '../models/User.js';
 import Otp from '../models/Otp.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { generateOTP } from '../utils/otpGenerator.js';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Dùng export const thay vì exports.
 export const requestOtp = async (req, res) => {
@@ -170,5 +173,57 @@ export const resetPassword = async (req, res) => {
         res.status(200).json({ message: 'Mật khẩu đã được thay đổi thành công!' });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server khi đổi mật khẩu.' });
+    }
+};
+
+export const googleLogin = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        // 1. Xác thực idToken gửi từ Frontend lên xem có đúng do Google cấp không
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const { name, email, picture } = ticket.getPayload();
+
+        // 2. Tìm user trong DB theo email
+        let user = await User.findOne({ email });
+
+        // 3. Nếu chưa có user thì tạo mới (Đăng ký bằng Google)
+        if (!user) {
+            user = new User({
+                name,
+                email,
+                // Vì đăng nhập qua Google nên không cần pass, 
+                // ta tạo một pass ngẫu nhiên để tránh lỗi DB
+                password: await bcrypt.hash(Math.random().toString(36), 10),
+                avatar: picture // Có thể lưu cả ảnh đại diện từ Google
+            });
+            await user.save();
+        }
+
+        // 4. Tạo JWT của hệ thống mình để user sử dụng lâu dài
+        const token = jwt.sign(
+            { id: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
+
+        res.status(200).json({
+            message: "Đăng nhập Google thành công!",
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        console.error("Lỗi xác thực Google:", error);
+        res.status(400).json({ message: "Xác thực Google thất bại!" });
     }
 };

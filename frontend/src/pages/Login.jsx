@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { login, clearError, clearSuccess } from "../redux/slices/authSlice";
+import { login, googleLogin, clearError, clearSuccess } from "../redux/slices/authSlice";
+import { GoogleLogin } from "@react-oauth/google";
 import "../styles/Auth.css";
 import { Helmet } from "react-helmet";
 
@@ -69,6 +70,25 @@ function Login() {
     });
   };
 
+  const handleGoogleSuccess = (credentialResponse) => {
+    setLocalError("");
+    dispatch(clearError());
+    
+    const idToken = credentialResponse.credential;
+    dispatch(googleLogin(idToken)).then((result) => {
+      if (result.type === googleLogin.fulfilled.type) {
+        dispatch(clearSuccess());
+        setTimeout(() => {
+          navigate("/profile");
+        }, 1000);
+      }
+    });
+  };
+
+  const handleGoogleError = () => {
+    setLocalError("Đăng nhập Google thất bại. Vui lòng thử lại.");
+  };
+
   return (
     <div className="auth-container">
       <Helmet>
@@ -134,6 +154,20 @@ function Login() {
             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
+
+        <div className="divider">
+          <span>Hoặc</span>
+        </div>
+
+        <div className="google-login-wrapper">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            text="signin_with"
+            locale="vi"
+          />
+        </div>
 
         <div className="auth-footer">
           Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
