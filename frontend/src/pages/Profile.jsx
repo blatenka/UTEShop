@@ -1,142 +1,154 @@
-import { useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../redux/slices/authSlice";
+import { useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { getProfile, logout, clearError } from "../redux/slices/authSlice";
 import "../styles/Profile.css";
+import { Helmet } from "react-helmet";
 
-function Profile({ onLogout }) {
+function Profile() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, loading } = useSelector((state) => state.auth);
+  const { user, loading, error } = useSelector((state) => state.auth);
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    // Nếu không có token, chuyển hướng về đăng nhập
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    // Nếu chưa có thông tin user, lấy từ API
+    if (!user && token) {
+      dispatch(getProfile());
+    }
+  }, [token, user, navigate, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());
     navigate("/");
   };
 
-  if (loading || !user) {
-    return <div className="loading">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="profile-container">
+        <div className="loading">Đang tải thông tin...</div>
+      </div>
+    );
   }
 
-  const joinDate = new Date(user.createdAt).toLocaleDateString();
+  if (error) {
+    return (
+      <div className="profile-container">
+        <div className="error-box">
+          <p className="error-message">{error}</p>
+          <Link to="/login" className="btn btn-primary">
+            Quay lại đăng nhập
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="profile-container">
+    <div className="profile-page">
+      <Helmet>
+        <title>Hồ sơ - UTEShop</title>
+      </Helmet>
+
+      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-container">
-          <a href="/" className="navbar-brand">
+          <Link to="/" className="navbar-brand">
             🛒 UTEShop
-          </a>
+          </Link>
+
           <div className="navbar-menu">
-            <a href="/" className="nav-link">Home</a>
-            <button onClick={handleLogout} className="nav-btn btn-logout">
-              Logout
+            <span className="user-name">{user?.name}</span>
+            <button onClick={handleLogout} className="nav-btn btn-secondary">
+              Đăng xuất
             </button>
           </div>
         </div>
       </nav>
 
-      <div className="profile-content">
+      {/* Profile Content */}
+      <div className="profile-container">
         <div className="profile-card">
           <div className="profile-header">
             <div className="profile-avatar">
-              {user.picture ? (
-                <img src={user.picture} alt={user.name} />
-              ) : (
-                <div className="avatar-placeholder">
-                  {user.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
+              <span className="avatar-placeholder">
+                {user?.name?.charAt(0)?.toUpperCase()}
+              </span>
             </div>
-            <div className="profile-title">
-              <h1>{user.name || 'User'}</h1>
-              <p className="profile-subtitle">{user.email}</p>
+            <div className="profile-info">
+              <h1 className="profile-name">{user?.name}</h1>
+              <p className="profile-email">{user?.email}</p>
+              <p className="profile-role">
+                {user?.role === "admin" ? "👑 Quản trị viên" : "👤 Khách hàng"}
+              </p>
             </div>
           </div>
 
-          <div className="profile-info">
-            <h2>Profile Information</h2>
-            
-            <div className="info-grid">
-              <div className="info-item">
-                <label>Full Name</label>
-                <p>{user.name || 'Not provided'}</p>
+          {/* Profile Details */}
+          <div className="profile-details">
+            <h2>Thông tin chi tiết</h2>
+
+            <div className="details-grid">
+              <div className="detail-item">
+                <label>ID người dùng</label>
+                <p className="detail-value">{user?.id}</p>
               </div>
 
-              <div className="info-item">
-                <label>Username</label>
-                <p>{user.username || 'Not set'}</p>
-              </div>
-
-              <div className="info-item">
+              <div className="detail-item">
                 <label>Email</label>
-                <p>{user.email}</p>
+                <p className="detail-value">{user?.email}</p>
               </div>
 
-              <div className="info-item">
-                <label>Account Type</label>
-                <p>{user.googleId ? '🔵 Google Account' : '📧 Email Account'}</p>
+              <div className="detail-item">
+                <label>Tên người dùng</label>
+                <p className="detail-value">{user?.name}</p>
               </div>
 
-              <div className="info-item">
-                <label>Status</label>
-                <p>
-                  {user.isVerified ? (
-                    <span className="badge badge-verified">✓ Verified</span>
-                  ) : (
-                    <span className="badge badge-pending">⏳ Pending</span>
-                  )}
+              <div className="detail-item">
+                <label>Vai trò</label>
+                <p className="detail-value">
+                  {user?.role === "admin" ? "Quản trị viên" : "Khách hàng"}
                 </p>
               </div>
-
-              <div className="info-item">
-                <label>Member Since</label>
-                <p>{joinDate}</p>
-              </div>
             </div>
           </div>
 
+          {/* Actions */}
           <div className="profile-actions">
-            <button className="btn btn-secondary">Edit Profile</button>
-            <button className="btn btn-secondary">Change Password</button>
+            <button className="btn btn-secondary">Chỉnh sửa hồ sơ</button>
+            <button className="btn btn-secondary">Đổi mật khẩu</button>
             <button onClick={handleLogout} className="btn btn-danger">
-              Logout
+              Đăng xuất
             </button>
           </div>
         </div>
 
-        <div className="profile-sidebar">
-          <div className="sidebar-card">
-            <h3>Account Settings</h3>
-            <ul>
-              <li><a href="#privacy">Privacy Settings</a></li>
-              <li><a href="#notifications">Notifications</a></li>
-              <li><a href="#security">Security</a></li>
-              <li><a href="#billing">Billing</a></li>
-              <li><a href="#help">Help & Support</a></li>
-            </ul>
-          </div>
-
-          <div className="sidebar-card">
-            <h3>Quick Stats</h3>
-            <div className="stat-item">
-              <span>Orders</span>
-              <strong>0</strong>
-            </div>
-            <div className="stat-item">
-              <span>Wishlist</span>
-              <strong>0</strong>
-            </div>
-            <div className="stat-item">
-              <span>Rewards</span>
-              <strong>0 pts</strong>
-            </div>
-          </div>
+        {/* Quick Links */}
+        <div className="quick-links">
+          <Link to="/" className="quick-link-card">
+            <span className="icon">🏠</span>
+            <span className="text">Trang chủ</span>
+          </Link>
+          <Link to="/" className="quick-link-card">
+            <span className="icon">📦</span>
+            <span className="text">Đơn hàng</span>
+          </Link>
+          <Link to="/" className="quick-link-card">
+            <span className="icon">❤️</span>
+            <span className="text">Yêu thích</span>
+          </Link>
+          <Link to="/" className="quick-link-card">
+            <span className="icon">⚙️</span>
+            <span className="text">Cài đặt</span>
+          </Link>
         </div>
       </div>
-
-      <footer className="footer">
-        <p>&copy; 2024 UTEShop. All rights reserved.</p>
-      </footer>
     </div>
   );
 }

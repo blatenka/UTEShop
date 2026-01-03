@@ -1,19 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { login } from "../redux/slices/authSlice";
+import { login, clearError, clearSuccess } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
+import { Helmet } from "react-helmet";
 
 function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, error } = useSelector((state) => state.auth);
-  
+  const { loading, error, success, user } = useSelector((state) => state.auth);
+
   const [localError, setLocalError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  // Nếu user đã đăng nhập, chuyển hướng đến profile
+  useEffect(() => {
+    if (user) {
+      navigate("/profile");
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -26,71 +36,108 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLocalError("");
+    dispatch(clearError());
 
-    if (!formData.email || !formData.password) {
-      setLocalError("Please fill all fields");
+    if (!formData.email) {
+      setLocalError("Vui lòng nhập email");
       return;
     }
 
-    dispatch(login(formData)).then((result) => {
+    if (!formData.password) {
+      setLocalError("Vui lòng nhập mật khẩu");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setLocalError("Email không hợp lệ");
+      return;
+    }
+
+    dispatch(
+      login({
+        email: formData.email,
+        password: formData.password,
+      })
+    ).then((result) => {
       if (result.type === login.fulfilled.type) {
-        navigate("/profile");
+        dispatch(clearSuccess());
+        setTimeout(() => {
+          navigate("/profile");
+        }, 1000);
       }
     });
   };
 
   return (
     <div className="auth-container">
+      <Helmet>
+        <title>Đăng nhập - UTEShop</title>
+      </Helmet>
       <div className="auth-card">
-        <h1>Login</h1>
+        <h2 className="auth-title">Đăng nhập tài khoản</h2>
 
-        {(error || localError) && <div className="error-message">{error || localError}</div>}
+        <div className="auth-tabs">
+          <div className="auth-tab active">Đăng nhập</div>
+          <Link to="/register" className="auth-tab">
+            Đăng ký
+          </Link>
+        </div>
+
+        {/* Thông báo lỗi/thành công */}
+        {localError && <div className="error-message">{localError}</div>}
+        {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message">{success}</div>}
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label htmlFor="email">Email *</label>
+            <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="Enter your email"
+              placeholder="Nhập email"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password *</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter your password"
-            />
+            <label htmlFor="password">Mật khẩu</label>
+            <div className="password-input-group">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Nhập mật khẩu"
+              />
+              <button
+                type="button"
+                className="show-password-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "Ẩn" : "Hiển"}
+              </button>
+            </div>
           </div>
 
           <div className="form-footer">
+            <div></div>
             <Link to="/forgot-password" className="link">
-              Forgot password?
+              Quên mật khẩu?
             </Link>
           </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Don't have an account? <Link to="/register">Sign up here</Link>
-        </p>
-
-        <div className="divider">OR</div>
-
-        <button className="btn btn-google btn-block">
-          🔵 Sign in with Google
-        </button>
+        <div className="auth-footer">
+          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+        </div>
       </div>
     </div>
   );

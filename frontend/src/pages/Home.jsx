@@ -1,67 +1,42 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../redux/slices/authSlice";
+import { Link } from "react-router-dom";
 import "../styles/Home.css";
 
-function Home({ onLogout }) {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { isLoggedIn, user } = useSelector((state) => state.auth);
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/");
-  };
+function Home() {
 
   return (
     <div className="home">
       <nav className="navbar">
         <div className="navbar-container">
           <Link to="/" className="navbar-brand">
-            🛒 UTEShop Book Shop
+            🛒 UTEShop
           </Link>
           
           <div className="navbar-menu">
-            {isLoggedIn ? (
-              <>
-                <span className="user-greeting">Hello, {user?.name || user?.email}!</span>
-                <Link to="/profile" className="nav-link">Profile</Link>
-                <button onClick={handleLogout} className="nav-btn btn-logout">
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="nav-link">Login</Link>
-                <Link to="/register" className="nav-btn btn-primary">
-                  Sign Up
-                </Link>
-              </>
-            )}
+            <Link to="/login" className="nav-btn btn-secondary">
+              Đăng nhập
+            </Link>
+            <Link to="/register" className="nav-btn btn-primary">
+              Đăng ký
+            </Link>
           </div>
         </div>
       </nav>
 
       <div className="hero">
         <div className="hero-content">
-          <h1>Welcome to UTEShop</h1>
-          <p>Discover amazing products at great prices</p>
-          {!isLoggedIn && (
-            <div className="hero-buttons">
-              <Link to="/register" className="btn btn-primary btn-large">
-                Get Started
-              </Link>
-              <Link to="/login" className="btn btn-secondary btn-large">
-                Sign In
-              </Link>
-            </div>
-          )}
+          <h1>Chào mừng đến với UTEShop</h1>
+          <p>Khám phá những sản phẩm tuyệt vời với giá cả phải chăng</p>
+          <div className="hero-buttons">
+            <Link to="/register" className="btn btn-primary btn-large">
+              Bắt đầu
+            </Link>
+          </div>
         </div>
       </div>
 
       <div className="products-section">
         <div className="container">
-          <h2>Featured Products</h2>
+          <h2>Sản phẩm nổi bật</h2>
           <div className="products-grid">
             {[1, 2, 3, 4, 5, 6].map((id) => (
               <div key={id} className="product-card">
@@ -69,9 +44,9 @@ function Home({ onLogout }) {
                   <div className="placeholder">Product {id}</div>
                 </div>
                 <div className="product-info">
-                  <h3>Product {id}</h3>
-                  <p className="price">$99.99</p>
-                  <button className="btn btn-secondary">Add to Cart</button>
+                  <h3>Sản phẩm {id}</h3>
+                  <p className="price">99.99 VND</p>
+                  <button className="btn btn-secondary">Thêm vào giỏ</button>
                 </div>
               </div>
             ))}
@@ -80,7 +55,7 @@ function Home({ onLogout }) {
       </div>
 
       <footer className="footer">
-        <p>&copy; 2024 UTEShop. All rights reserved.</p>
+        <p>&copy; 2024 UTEShop. Tất cả quyền được bảo lưu.</p>
       </footer>
     </div>
   );

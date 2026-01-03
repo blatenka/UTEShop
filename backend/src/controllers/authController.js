@@ -1,366 +1,174 @@
-import User from "../models/User.js";
-import { generateOTP, otpExpires } from "../utils/otp.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import User from '../models/User.js';
+import Otp from '../models/Otp.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { generateOTP } from '../utils/otpGenerator.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || "22110223";
-
-/*
-  POST /auth/request-otp
-  Body: { email }
-*/
+// Dùng export const thay vì exports.
 export const requestOtp = async (req, res) => {
-  try {
-    const { email } = req.body;
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: "Vui lòng nhập email" });
 
-    if (!email) return res.status(400).json({ message: "Email required" });
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: 'Email đã tồn tại.' });
 
-    const existingUser = await User.findOne({ email, isVerified: true });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+        const otpCode = generateOTP(6); 
+
+        await Otp.findOneAndUpdate(
+            { email },
+            { otp: otpCode },
+            { upsert: true, new: true }
+        );
+
+        console.log("-----------------------------------------");
+        console.log(`[DEV MODE] OTP cho ${email} là: ${otpCode}`);
+        console.log(`Mã sẽ hết hạn sau ${process.env.OTP_EXPIRE_MINUTES} phút.`);
+        console.log("-----------------------------------------");
+
+        res.status(200).json({ message: 'Mã OTP đã được tạo thành công' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server' });
     }
-
-    // Tao OTP
-    const otp = generateOTP();
-    const expiresAt = otpExpires(process.env.OTP_EXPIRE_MINUTES);
-
-    // Luu tam OTP
-    await User.findOneAndUpdate(
-      { email },
-      {
-        $set: {
-          otp: { code: otp, expiresAt },
-        },
-      },
-      { upsert: true, new: true }
-    );
-
-    console.log(`OTP for ${email}: ${otp}`);
-
-    res.json({ message: "OTP sent successfully", email });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
-/*
-  POST /auth/register
-  Body: { email, password, name, username, otp }
-*/
 export const register = async (req, res) => {
-  try {
-    const { email, password, name, username, otp } = req.body;
-    
-    // Kiem tra du lieu dau vao
-    if (!email) return res.status(400).json({ message: "Email required" });
-    if (!password) return res.status(400).json({ message: "Password required" });
-    if (!name) return res.status(400).json({ message: "Name required" });
-    if (!username) return res.status(400).json({ message: "Username required" });
-    if (!otp) return res.status(400).json({ message: "OTP required" });
+    try {
+        const { name, email, password, otp } = req.body;
 
-    // Xac thuc mat khau
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+        const validOtp = await Otp.findOne({ email, otp });
+        if (!validOtp) {
+            return res.status(400).json({ message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = new User({ name, email, password: hashedPassword });
+        await newUser.save();
+        await Otp.deleteOne({ email });
+
+        res.status(201).json({ message: 'Đăng ký thành công!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi đăng ký' });
     }
-
-    // Tim user theo email
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not found. Please request OTP first" });
-
-    // Kiem tra neu da xac thuc   
-    if (user.isVerified) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
-
-    //
-    if (!user.otp) return res.status(400).json({ message: "OTP not requested" });
-
-    if (new Date() > user.otp.expiresAt) {
-      return res.status(400).json({ message: "OTP expired. Please request a new one" });
-    }
-
-    if (user.otp.code !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // kiem tra username da ton tai 
-    const existingUsername = await User.findOne({ username });
-    if (existingUsername) {
-      return res.status(400).json({ message: "Username already taken" });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Cap nhat user
-    user.name = name;
-    user.username = username;
-    user.passwordHash = passwordHash;
-    user.isVerified = true;
-    user.otp = undefined;
-
-    await user.save();
-
-    res.json({
-      message: "Register successful",
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
-/*
-  POST /auth/forgot-password
-  Body: { email }
-*/
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) return res.status(400).json({ message: "Email required" });
-
-    // Kiem tra user da dang ky
-    const user = await User.findOne({ email, isVerified: true });
-    if (!user) {
-      return res.status(400).json({ message: "Email not found or not verified" });
-    }
-
-    // Tao OTP
-    const otp = generateOTP();
-    const expiresAt = otpExpires(process.env.OTP_EXPIRE_MINUTES);
-
-    // Luu OTP cho reset password
-    user.otp = { code: otp, expiresAt };
-    await user.save();
-
-    console.log(`OTP for password reset ${email}: ${otp}`);
-
-    res.json({
-      message: "OTP sent to your email",
-      email,
-      note: "Use this OTP to reset your password"
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/*
-  POST /auth/reset-password
-  Body: { email, otp, newPassword }
-*/
-export const resetPassword = async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-
-    if (!email) return res.status(400).json({ message: "Email required" });
-    if (!otp) return res.status(400).json({ message: "OTP required" });
-    if (!newPassword) return res.status(400).json({ message: "New password required" });
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
-
-    // Tim user
-    const user = await User.findOne({ email, isVerified: true });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    // Kiem tra OTP
-    if (!user.otp) {
-      return res.status(400).json({ message: "OTP not requested" });
-    }
-
-    if (new Date() > user.otp.expiresAt) {
-      return res.status(400).json({ message: "OTP expired. Please request a new one" });
-    }
-
-    if (user.otp.code !== otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
-    }
-
-    // Hash mat khau moi
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    // Cap nhat password
-    user.passwordHash = passwordHash;
-    user.otp = undefined;
-    await user.save();
-
-    res.json({
-      message: "Password reset successful",
-      email: user.email
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/*
-  Login with Email and Password
-  POST /auth/login
-  Body: { email, password }
-*/
 export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    if (!email) return res.status(400).json({ message: "Email required" });
-    if (!password) return res.status(400).json({ message: "Password required" });
+        // 1. Kiểm tra email tồn tại
+        const user = await User.findOne({ email });
+        //console.log(email, password);
+        if (!user) {
+            return res.status(400).json({ message: 'Email hoặc mật khẩu không chính xác.' });
+        }
 
-    // Tim user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Email or password incorrect" });
-    }
+        // 2. So sánh mật khẩu (dùng bcrypt.compare)
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Email hoặc mật khẩu không chính xác.' });
+        }
 
-    // Kiem tra xac thuc
-    if (!user.isVerified) {
-      return res.status(400).json({ message: "Email not verified. Please complete registration" });
-    }
+        // 3. Tạo JWT Token
+        // Payload chứa ID và Role (để sau này phân quyền Admin)
+        const token = jwt.sign(
+            { id: user._id, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' } // Token hết hạn sau 1 ngày
+        );
 
-    // So sanh password
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: "Email or password incorrect" });
-    }
-
-    // Tao JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, username: user.username },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-/*
-  Google Login
-  POST /auth/google-login
-  Body: { googleId, email, name, picture }
-*/
-export const googleLogin = async (req, res) => {
-  try {
-    const { googleId, email, name, picture } = req.body;
-
-    if (!googleId) return res.status(400).json({ message: "GoogleId required" });
-    if (!email) return res.status(400).json({ message: "Email required" });
-
-    // Tim user theo googleId
-    let user = await User.findOne({ googleId });
-
-    if (!user) {
-      // Neu chua co user, tim theo email
-      user = await User.findOne({ email });
-
-      if (!user) {
-        // Tao user moi
-        user = new User({
-          googleId,
-          email,
-          name,
-          picture,
-          isVerified: true, // Google verified
+        // 4. Trả về thông tin user (không gửi mật khẩu) và token
+        res.status(200).json({
+            message: 'Đăng nhập thành công!',
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
         });
-      } else {
-        // Cap nhat googleId neu user exist
-        user.googleId = googleId;
-        if (picture) user.picture = picture;
-      }
+
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server khi đăng nhập.', error: error.message });
     }
-
-    // Ensure user is verified
-    user.isVerified = true;
-    await user.save();
-
-    // Tao JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, username: user.username },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      message: "Google login successful",
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-        picture: user.picture,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
-/*
-  Get User Profile
-  GET /auth/profile
-  Headers: Authorization: Bearer TOKEN
-*/
 export const getProfile = async (req, res) => {
-  try {
-    // Lay userId tu token (middleware se set req.userId)
-    const userId = req.userId;
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+        if (!user) {
+            return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+        }
+
+        res.status(200).json({
+            message: "Chào mừng bạn đến với trang cá nhân",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
+};
 
-    const user = await User.findById(userId).select(
-      "id email name username picture googleId isVerified createdAt"
-    );
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: "Vui lòng nhập email" });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+        // Khác với đăng ký, quên mật khẩu yêu cầu email PHẢI tồn tại
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "Email này chưa được đăng ký tài khoản." });
+        }
+
+        const otpCode = generateOTP(6);
+
+        await Otp.findOneAndUpdate(
+            { email },
+            { otp: otpCode },
+            { upsert: true, new: true }
+        );
+
+        console.log("-----------------------------------------");
+        console.log(`[FORGOT PASSWORD] OTP cho ${email} là: ${otpCode}`);
+        console.log("-----------------------------------------");
+
+        res.status(200).json({ message: 'Mã xác thực đã được gửi đến email của bạn.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server' });
     }
+};
 
-    res.json({
-      message: "Profile retrieved successfully",
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-        picture: user.picture,
-        googleId: user.googleId,
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        // Kiểm tra OTP
+        const validOtp = await Otp.findOne({ email, otp });
+        if (!validOtp) {
+            return res.status(400).json({ message: 'Mã OTP không chính xác hoặc đã hết hạn.' });
+        }
+
+        // Băm mật khẩu mới
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Cập nhật mật khẩu cho User
+        await User.findOneAndUpdate({ email }, { password: hashedPassword });
+
+        // Xóa OTP
+        await Otp.deleteOne({ email });
+
+        res.status(200).json({ message: 'Mật khẩu đã được thay đổi thành công!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server khi đổi mật khẩu.' });
+    }
 };

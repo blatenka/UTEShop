@@ -13,21 +13,128 @@
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 400px;
+  max-width: 450px;
 }
 
-.auth-card h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
-  text-align: center;
+/* Auth Tabs */
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+.auth-tab {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  padding-bottom: 15px;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block;
+  margin-bottom: -15px;
+  padding-bottom: 30px;
+}
+
+.auth-tab:hover {
   color: var(--text-dark);
 }
 
-.auth-card > p:first-of-type {
+.auth-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* OTP Methods */
+.otp-methods {
+  display: flex;
+  gap: 15px;
+  margin-top: 12px;
+}
+
+.otp-method {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+  transition: all 0.3s ease;
+}
+
+.otp-method:hover {
+  border-color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.otp-method.active {
+  border-color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--primary-color);
+}
+
+.method-icon {
+  font-size: 20px;
+}
+
+/* OTP Input Large */
+.otp-input-large {
+  font-size: 24px !important;
+  font-weight: 600;
+  letter-spacing: 8px;
   text-align: center;
-  color: var(--text-light);
-  margin-bottom: 24px;
+  padding: 16px 12px !important;
+}
+
+/* Password Input Group */
+.password-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  padding-right: 50px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   font-size: 14px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.password-input-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.show-password-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.show-password-btn:hover {
+  text-decoration: underline;
 }
 
 /* Form Groups */
@@ -87,6 +194,25 @@
 }
 
 .form-footer .link:hover {
+  text-decoration: underline;
+}
+
+/* Auth Footer Disclaimer */
+.auth-footer-disclaimer {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 12px;
+  margin-top: 20px;
+  line-height: 1.5;
+}
+
+.auth-footer-disclaimer .link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-footer-disclaimer .link:hover {
   text-decoration: underline;
 }
 
@@ -157,6 +283,11 @@ form {
   background-color: #2563eb;
 }
 
+.btn-primary.btn-block:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-google.btn-block {
   border: 1px solid var(--border-color);
   background-color: white;
@@ -181,6 +312,23 @@ form {
 
 .btn-link:hover {
   text-decoration: underline;
+}
+
+.btn-back {
+  background: none;
+  color: var(--text-light);
+  text-decoration: none;
+  padding: 8px 0;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.btn-back:hover {
+  text-decoration: underline;
+  color: var(--text-dark);
 }
 
 /* Step Indicator */
@@ -209,8 +357,8 @@ form {
     padding: 30px 20px;
   }
 
-  .auth-card h1 {
-    font-size: 24px;
+  .auth-tabs {
+    gap: 40px;
   }
 
   .form-group {

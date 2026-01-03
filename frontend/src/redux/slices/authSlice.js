@@ -28,30 +28,15 @@ export const register = createAsyncThunk(
 
 export const login = createAsyncThunk(
   'auth/login',
-  async ({ email, password }, { rejectWithValue }) => {
+  async (credentials, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post('/login', { email, password });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      return { token, user };
+      const response = await apiClient.post('/login', credentials);
+      // Lưu token vào localStorage
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
-    }
-  }
-);
-
-export const googleLogin = createAsyncThunk(
-  'auth/googleLogin',
-  async (googleData, { rejectWithValue }) => {
-    try {
-      const response = await apiClient.post('/google-login', googleData);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      return { token, user };
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Google login failed');
     }
   }
 );
@@ -61,7 +46,7 @@ export const getProfile = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await apiClient.get('/profile');
-      return response.data.user;
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
     }
@@ -82,25 +67,20 @@ export const forgotPassword = createAsyncThunk(
 
 export const resetPassword = createAsyncThunk(
   'auth/resetPassword',
-  async ({ email, otp, newPassword }, { rejectWithValue }) => {
+  async (userData, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post('/reset-password', {
-        email,
-        otp,
-        newPassword,
-      });
+      const response = await apiClient.post('/reset-password', userData);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Password reset failed');
+      return rejectWithValue(error.response?.data?.message || 'Failed to reset password');
     }
   }
 );
 
 // Initial state
 const initialState = {
-  user: JSON.parse(localStorage.getItem('user')) || null,
+  user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
   token: localStorage.getItem('token') || null,
-  isLoggedIn: !!localStorage.getItem('token'),
   loading: false,
   error: null,
   success: null,
@@ -111,19 +91,19 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    logout: (state) => {
-      state.user = null;
-      state.token = null;
-      state.isLoggedIn = false;
-      state.error = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    },
     clearError: (state) => {
       state.error = null;
     },
     clearSuccess: (state) => {
       state.success = null;
+    },
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.success = null;
+      state.error = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     },
   },
   extraReducers: (builder) => {
@@ -165,31 +145,11 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.token = action.payload.token;
         state.user = action.payload.user;
-        state.isLoggedIn = true;
-        state.success = 'Login successful!';
+        state.token = action.payload.token;
+        state.success = action.payload.message;
       })
       .addCase(login.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-        state.isLoggedIn = false;
-      });
-
-    // Google Login
-    builder
-      .addCase(googleLogin.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(googleLogin.fulfilled, (state, action) => {
-        state.loading = false;
-        state.token = action.payload.token;
-        state.user = action.payload.user;
-        state.isLoggedIn = true;
-        state.success = 'Login successful!';
-      })
-      .addCase(googleLogin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
@@ -198,16 +158,15 @@ const authSlice = createSlice({
     builder
       .addCase(getProfile.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload;
-        state.isLoggedIn = true;
+        state.user = action.payload.user;
       })
       .addCase(getProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        state.isLoggedIn = false;
       });
 
     // Forgot Password
@@ -233,14 +192,15 @@ const authSlice = createSlice({
       })
       .addCase(resetPassword.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = 'Password reset successful!';
+        state.success = action.payload.message;
       })
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
-  },
+    }
 });
 
-export const { logout, clearError, clearSuccess } = authSlice.actions;
+export const { clearError, clearSuccess, logout } = authSlice.actions;
 export default authSlice.reducer;
+

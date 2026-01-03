@@ -1,65 +1,151 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { forgotPassword, resetPassword, clearError, clearSuccess } from "../redux/slices/authSlice";
+import {
+  forgotPassword,
+  resetPassword,
+  clearError,
+  clearSuccess,
+} from "../redux/slices/authSlice";
 import "../styles/Auth.css";
+import { Helmet } from "react-helmet";
 
 function ForgotPassword() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loading, error, success } = useSelector((state) => state.auth);
-  
-  const [step, setStep] = useState(1); // 1: email, 2: OTP, 3: new password
+
+  const [step, setStep] = useState(1); // 1: Email, 2: OTP & Password
   const [localError, setLocalError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
 
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const timerRef = useRef(null);
 
+  const [formData, setFormData] = useState({
+    email: "",
+    otp: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Cleanup interval khi unmount hoặc khi countdown về 0
+  useEffect(() => {
+    if (resendCountdown === 0 && timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [resendCountdown]);
+
+  const startCountdown = (seconds) => {
+    // Tránh tạo nhiều interval
+    if (timerRef.current) clearInterval(timerRef.current);
+    setResendCountdown(seconds);
+    timerRef.current = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Step 1: Request OTP
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setLocalError("");
+    setSuccessMessage("");
+    dispatch(clearError());
 
-    if (!email) {
-      setLocalError("Please enter your email");
+    if (!formData.email) {
+      setLocalError("Vui lòng nhập email");
       return;
     }
 
-    dispatch(forgotPassword(email)).then((result) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setLocalError("Email không hợp lệ");
+      return;
+    }
+
+    dispatch(forgotPassword(formData.email)).then((result) => {
       if (result.type === forgotPassword.fulfilled.type) {
         setStep(2);
+        startCountdown(600); // 10 phút
       }
     });
   };
 
+  // Step 2: Reset Password
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLocalError("");
+    setSuccessMessage("");
+    dispatch(clearError());
 
-    if (!otp || !newPassword) {
-      setLocalError("Please fill all fields");
+    if (!formData.otp) {
+      setLocalError("Vui lòng nhập mã OTP");
       return;
     }
 
-    if (newPassword.length < 6) {
-      setLocalError("Password must be at least 6 characters");
+    if (!formData.newPassword) {
+      setLocalError("Vui lòng nhập mật khẩu mới");
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setLocalError("Passwords don't match");
+    if (formData.newPassword.length < 6) {
+      setLocalError("Mật khẩu phải ít nhất 6 ký tự");
+      return;
+    }
+
+    if (!formData.confirmPassword) {
+      setLocalError("Vui lòng nhập xác nhận mật khẩu");
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setLocalError("Mật khẩu xác nhận không khớp");
       return;
     }
 
     dispatch(
       resetPassword({
-        email,
-        otp,
-        newPassword,
+        email: formData.email,
+        otp: formData.otp,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
       })
     ).then((result) => {
       if (result.type === resetPassword.fulfilled.type) {
+        setSuccessMessage("Bạn đã đổi mật khẩu thành công!");
+        dispatch(clearSuccess());
+        // Có thể xoá OTP và password sau khi đổi
+        setFormData((prev) => ({
+          ...prev,
+          otp: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
+        // Điều hướng sau 2 giây
         setTimeout(() => {
           navigate("/login");
         }, 2000);
@@ -67,115 +153,176 @@ function ForgotPassword() {
     });
   };
 
+  const handleResendOTP = () => {
+    setLocalError("");
+    setSuccessMessage("");
+    dispatch(clearError());
+
+    if (!formData.email) {
+      setLocalError("Vui lòng nhập email trước khi yêu cầu gửi lại OTP");
+      return;
+    }
+
+    dispatch(forgotPassword(formData.email)).then((result) => {
+      if (result.type === forgotPassword.fulfilled.type) {
+        startCountdown(600); // 10 phút
+      }
+    });
+  };
+
   return (
     <div className="auth-container">
+      <Helmet>
+        <title>Quên mật khẩu - UTEShop</title>
+      </Helmet>
       <div className="auth-card">
-        <h1>Reset Password</h1>
+        <h2 className="auth-title">Quên mật khẩu</h2>
 
-        {(error || localError) && <div className="error-message">{error || localError}</div>}
+        <div className="auth-tabs">
+          <Link to="/login" className="auth-tab">
+            Đăng nhập
+          </Link>
+          <div className="auth-tab active">Quên mật khẩu</div>
+          <Link to="/register" className="auth-tab">
+            Đăng ký
+          </Link>
+        </div>
+
+        {/* Thông báo lỗi/thành công */}
+        {localError && <div className="error-message">{localError}</div>}
+        {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
+        {successMessage && <div className="success-message">{successMessage}</div>}
 
+        {/* Step 1: Email */}
         {step === 1 ? (
           <form onSubmit={handleRequestOTP}>
             <div className="form-group">
-              <label htmlFor="email">Email *</label>
+              <label htmlFor="email">Email</label>
               <input
                 type="email"
                 id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Nhập email của bạn"
               />
             </div>
+
+            <p className="form-hint">
+              Nhập địa chỉ email của bạn và chúng tôi sẽ gửi mã xác thực OTP để bạn có thể đặt lại mật khẩu.
+            </p>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Sending OTP..." : "Request OTP"}
-            </button>
-
-            <Link to="/login" className="btn btn-link">
-              ← Back to Login
-            </Link>
-          </form>
-        ) : step === 2 ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setStep(3);
-            }}
-          >
-            <div className="form-group">
-              <label htmlFor="otp">Enter OTP *</label>
-              <input
-                type="text"
-                id="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter 6-digit OTP"
-                maxLength="6"
-              />
-              <small>Check your console for OTP (dev mode)</small>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block">
-              Verify OTP
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-link"
-              onClick={() => {
-                setStep(1);
-                setOtp("");
-              }}
-            >
-              ← Back
+              {loading ? "Đang gửi..." : "Yêu cầu mã OTP"}
             </button>
           </form>
         ) : (
+          /* Step 2: OTP & Password */
           <form onSubmit={handleResetPassword}>
             <div className="form-group">
-              <label htmlFor="newPassword">New Password *</label>
+              <label htmlFor="otp">Mã OTP</label>
               <input
-                type="password"
-                id="newPassword"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 6 characters"
+                type="text"
+                id="otp"
+                name="otp"
+                value={formData.otp}
+                onChange={handleInputChange}
+                placeholder="Nhập mã OTP"
+                maxLength="6"
               />
+              <small className="form-text-light">
+                Mã OTP đã được gửi đến email: <strong>{formData.email}</strong>
+              </small>
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password *</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-              />
+              <label htmlFor="newPassword">Mật khẩu mới</label>
+              <div className="password-input-group">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="newPassword"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  placeholder="Nhập mật khẩu mới"
+                />
+                <button
+                  type="button"
+                  className="show-password-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? "Ẩn" : "Hiển"}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+              <div className="password-input-group">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Xác nhận mật khẩu mới"
+                />
+                <button
+                  type="button"
+                  className="show-password-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? "Ẩn" : "Hiển"}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-footer">
+              <button
+                type="button"
+                className="link"
+                onClick={handleResendOTP}
+                disabled={resendCountdown > 0 || loading}
+              >
+                {resendCountdown > 0
+                  ? `Gửi lại OTP (${resendCountdown}s)`
+                  : "Gửi lại mã OTP"}
+              </button>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setStep(1);
+                  setFormData({
+                    email: "",
+                    otp: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                  });
+                  setLocalError("");
+                  setSuccessMessage("");
+                  dispatch(clearError());
+                  if (timerRef.current) {
+                    clearInterval(timerRef.current);
+                    timerRef.current = null;
+                  }
+                  setResendCountdown(0);
+                }}
+              >
+                Dùng email khác
+              </button>
             </div>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Resetting..." : "Reset Password"}
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-link"
-              onClick={() => {
-                setStep(2);
-                setNewPassword("");
-                setConfirmPassword("");
-              }}
-            >
-              ← Back
+              {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
             </button>
           </form>
         )}
 
-        <p className="auth-footer">
-          Remember your password? <Link to="/login">Login here</Link>
-        </p>
+        <div className="auth-footer">
+          Bạn đã nhớ mật khẩu? <Link to="/login">Đăng nhập ngay</Link>
+        </div>
       </div>
     </div>
   );

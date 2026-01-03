@@ -3,26 +3,25 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { requestOtp, register, clearError, clearSuccess } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
+import { Helmet} from "react-helmet";
 
 function Register() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loading, error, success } = useSelector((state) => state.auth);
   
-  const [step, setStep] = useState(1); // 1: fill info, 2: verify OTP
+  const [otpRequested, setOtpRequested] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Step 1: Form data
   const [formData, setFormData] = useState({
     email: "",
+    otp: "",
     name: "",
-    username: "",
     password: "",
     confirmPassword: "",
   });
-
-  // Step 2: OTP verification
-  const [otp, setOtp] = useState("");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -35,26 +34,22 @@ function Register() {
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setLocalError("");
+    dispatch(clearError());
 
-    // Validation
-    if (!formData.email || !formData.name || !formData.username || !formData.password) {
-      setLocalError("Please fill all required fields");
+    if (!formData.email) {
+      setLocalError("Vui lòng nhập email");
       return;
     }
 
-    if (formData.password.length < 6) {
-      setLocalError("Password must be at least 6 characters");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setLocalError("Passwords don't match");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setLocalError("Email không hợp lệ");
       return;
     }
 
     dispatch(requestOtp(formData.email)).then((result) => {
       if (result.type === requestOtp.fulfilled.type) {
-        setStep(2);
+        setOtpRequested(true);
       }
     });
   };
@@ -62,24 +57,46 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setLocalError("");
+    dispatch(clearError());
 
-    if (!otp) {
-      setLocalError("Please enter OTP");
+    if (!formData.otp) {
+      setLocalError("Vui lòng nhập mã OTP");
+      return;
+    }
+
+    if (!formData.name) {
+      setLocalError("Vui lòng nhập tên người dùng");
+      return;
+    }
+
+    if (!formData.password) {
+      setLocalError("Vui lòng nhập mật khẩu");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setLocalError("Mật khẩu phải ít nhất 6 ký tự");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError("Mật khẩu xác nhận không khớp");
       return;
     }
 
     dispatch(
       register({
         email: formData.email,
-        otp: otp,
         password: formData.password,
+        otp: formData.otp,
         name: formData.name,
-        username: formData.username,
+        confirmPassword: formData.confirmPassword,
       })
     ).then((result) => {
       if (result.type === register.fulfilled.type) {
+        dispatch(clearSuccess());
         setTimeout(() => {
-          navigate("/login");
+          navigate("/");
         }, 2000);
       }
     });
@@ -87,119 +104,150 @@ function Register() {
 
   return (
     <div className="auth-container">
+      <Helmet>
+        <title>Đăng ký - UTEShop</title>
+      </Helmet>
       <div className="auth-card">
-        <h1>Create Account</h1>
+        <h2 className="auth-title">Đăng ký tài khoản</h2>
 
-        {(error || localError) && <div className="error-message">{error || localError}</div>}
+        <div className="auth-tabs">
+          <Link to="/login" className="auth-tab">
+            Đăng nhập
+          </Link>
+          <div className="auth-tab active">Đăng ký</div>
+        </div>
+
+        {/* Thông báo lỗi/thành công */}
+        {localError && <div className="error-message">{localError}</div>}
+        {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
 
-        {step === 1 ? (
-          <form onSubmit={handleRequestOTP}>
-            <div className="form-group">
-              <label htmlFor="email">Email *</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter your email"
-                disabled={step === 2}
-              />
-            </div>
+        <form onSubmit={otpRequested ? handleRegister : handleRequestOTP}>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="Nhập email"
+              disabled={otpRequested}
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="name">Full Name *</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="Enter your full name"
-                disabled={step === 2}
-              />
-            </div>
+          {!otpRequested && (
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+              {loading ? "Đang gửi OTP..." : "Nhận OTP qua email"}
+            </button>
+          )}
 
-            <div className="form-group">
-              <label htmlFor="username">Username *</label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                placeholder="Choose a username"
-                disabled={step === 2}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="otp">Mã OTP</label>
+            <input
+              type="text"
+              id="otp"
+              name="otp"
+              value={formData.otp}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                setFormData((prev) => ({
+                  ...prev,
+                  otp: value,
+                }));
+              }}
+              placeholder="Nhập 6 chữ số"
+              maxLength="6"
+              disabled={!otpRequested}
+              className="otp-input-large"
+            />
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password *</label>
+          <div className="form-group">
+            <label htmlFor="name">Tên người dùng</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Nhập tên"
+              disabled={!otpRequested}
+            />
+          </div>
+
+          {/* Mật khẩu */}
+          <div className="form-group">
+            <label htmlFor="password">Mật khẩu</label>
+            <div className="password-input-group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Min. 6 characters"
-                disabled={step === 2}
+                placeholder="Nhập mật khẩu"
+                disabled={!otpRequested}
               />
+              <button
+                type="button"
+                className="show-password-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "Ẩn" : "Hiển"}
+              </button>
             </div>
+          </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password *</label>
+          {/* Nhập lại mật khẩu */}
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Nhập lại mật khẩu</label>
+            <div className="password-input-group">
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 id="confirmPassword"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                placeholder="Confirm your password"
-                disabled={step === 2}
+                placeholder="Nhập lại mật khẩu"
+                disabled={!otpRequested}
               />
+              <button
+                type="button"
+                className="show-password-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? "Ẩn" : "Hiển"}
+              </button>
             </div>
+          </div>
 
+          {otpRequested && (
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Sending OTP..." : "Request OTP"}
+              {loading ? "Đang đăng ký..." : "Đăng ký"}
             </button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister}>
-            <div className="form-group">
-              <label htmlFor="otp">Enter OTP *</label>
-              <input
-                type="text"
-                id="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter 6-digit OTP"
-                maxLength="6"
-              />
-              <small>Check your console for OTP (dev mode)</small>
-            </div>
+          )}
 
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Verifying..." : "Complete Registration"}
-            </button>
-
+          {otpRequested && (
             <button
               type="button"
-              className="btn btn-link"
+              className="btn-back"
               onClick={() => {
-                setStep(1);
-                setOtp("");
+                setOtpRequested(false);
+                setFormData({ ...formData, otp: "", name: "", password: "", confirmPassword: "" });
                 setLocalError("");
               }}
             >
-              ← Back
+              ← Quay lại
             </button>
-          </form>
-        )}
+          )}
+        </form>
 
-        <p className="auth-footer">
-          Already have an account? <Link to="/login">Login here</Link>
-        </p>
+        <div className="auth-footer-disclaimer">
+          Bằng việc đăng ký, bạn đã đồng ý với UTEShop về{" "}
+          <a href="#" className="link">Điều khoản dịch vụ</a> &{" "}
+          <a href="#" className="link">Chính sách bảo mật</a>
+        </div>
       </div>
     </div>
   );

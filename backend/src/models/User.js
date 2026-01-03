@@ -1,22 +1,10 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const OtpSchema = new mongoose.Schema({
-  code: String,
-  expiresAt: Date,
-});
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, default: 'user' }, // phân quyền user/admin
+}, { timestamps: true });
 
-const UserSchema = new mongoose.Schema(
-  {
-    name: { type: String },
-    username: { type: String, unique: true, sparse: true },
-    email: { type: String, required: true, unique: true },
-    passwordHash: { type: String },
-    googleId: { type: String, unique: true, sparse: true },
-    picture: { type: String }, // Avatar URL từ Google
-    isVerified: { type: Boolean, default: false },
-    otp: OtpSchema,
-  },
-  { timestamps: true }
-);
-
-export default mongoose.model("User", UserSchema);
+export default mongoose.model('User', userSchema);
