@@ -1,0 +1,409 @@
+/* Book Detail Page */
+.book-detail {
+  min-height: 100vh;
+  background-color: #f9f9f9;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  background-color: white;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breadcrumb .container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.breadcrumb-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  color: var(--text-light);
+}
+
+.breadcrumb-current {
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+/* Detail Container */
+.detail-container {
+  padding: 40px 20px;
+}
+
+.detail-container .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 32px;
+  transition: color 0.3s ease;
+}
+
+.back-btn:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Detail Content */
+.detail-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  background-color: white;
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.detail-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-image img {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.discount-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: #ef4444;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* Detail Info */
+.detail-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+}
+
+.book-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.meta-item {
+  display: flex;
+  gap: 8px;
+  font-size: 16px;
+}
+
+.meta-item .label {
+  font-weight: 600;
+  color: var(--text-dark);
+  min-width: 100px;
+}
+
+.meta-item .value {
+  color: var(--text-light);
+}
+
+/* Rating */
+.rating-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.rating-text {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+/* Price Section */
+.price-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: #f0f7ff;
+  border-radius: 6px;
+}
+
+.current-price {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.original-price {
+  font-size: 18px;
+  color: var(--text-light);
+  text-decoration: line-through;
+}
+
+/* Stock Status */
+.stock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.stock-status .in-stock {
+  color: #16a34a;
+}
+
+.stock-status .out-of-stock {
+  color: #ef4444;
+}
+
+/* Sales Info */
+.sales-info {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+/* Buttons */
+.btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: var(--light-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--border-color);
+}
+
+.btn-large {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 18px;
+}
+
+.btn-disabled {
+  background-color: var(--text-light);
+  color: white;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-disabled:hover {
+  background-color: var(--text-light);
+}
+
+/* Description Section */
+.description-section {
+  background-color: white;
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.description-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+}
+
+.description {
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--text-dark);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Reviews Section */
+.reviews-section {
+  background-color: white;
+  padding: 32px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin-bottom: 40px;
+}
+
+.reviews-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 24px;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.review-item {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.review-name {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.review-rating {
+  font-size: 18px;
+}
+
+.review-comment {
+  color: var(--text-light);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Error Container */
+.error-container {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.error-container .error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  display: inline-block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .detail-content {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 20px;
+  }
+
+  .book-title {
+    font-size: 24px;
+  }
+
+  .current-price {
+    font-size: 24px;
+  }
+
+  .description-section,
+  .reviews-section {
+    padding: 20px;
+  }
+
+  .breadcrumb .container {
+    font-size: 14px;
+  }
+
+  .detail-image img {
+    max-width: 100%;
+  }
+
+  .sales-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-container {
+    padding: 20px;
+  }
+
+  .book-title {
+    font-size: 20px;
+  }
+
+  .current-price {
+    font-size: 20px;
+  }
+
+  .price-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-large {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+}
