@@ -227,3 +227,28 @@ export const googleLogin = async (req, res) => {
         res.status(400).json({ message: "Xác thực Google thất bại!" });
     }
 };
+
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({}).select('-password'); // Ẩn mật khẩu vì lý do bảo mật
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi lấy danh sách người dùng" });
+    }
+};
+
+// Xóa người dùng (Nếu cần)
+export const deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (user) {
+            if (user.role === 'admin') return res.status(400).json({ message: "Không thể xóa Admin" });
+            await user.deleteOne();
+            res.status(200).json({ message: "Đã xóa người dùng thành công" });
+        } else {
+            res.status(404).json({ message: "Không tìm thấy người dùng" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi xóa người dùng" });
+    }
+};

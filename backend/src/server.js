@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
 import bookRoutes from "./routes/bookRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js"
 
 // 1. Cấu hình dotenv ngay đầu file
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // 3. Routes
 app.use("/api/auth", authRoutes); // Thêm tiền tố /api để đúng chuẩn RESTful
 app.use("/api/books", bookRoutes);
+app.use("/api/orders", orderRoutes);
 
 // 4. Kết nối MongoDB với các tùy chọn xử lý lỗi tốt hơn
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ute_bookshop";

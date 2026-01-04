@@ -1,13 +1,24 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { getBooks } from "../api";
+import { addToCart } from "../redux/slices/cartSlice";
 import "../styles/Home.css";
+import { Helmet } from "react-helmet";
+import { FaShoppingCart, FaCrown, FaBox, FaUser, FaSearch } from "react-icons/fa";
 
 function Home() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { cartItems } = useSelector((state) => state.cart);
+  
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     fetchBooks();
@@ -32,8 +43,31 @@ function Home() {
     fetchBooks(searchKeyword);
   };
 
+  const handleAddToCart = (book) => {
+    if (book.countInStock === 0) {
+      alert("Sách này đã hết hàng");
+      return;
+    }
+    
+    dispatch(addToCart({
+      product: book._id,
+      title: book.title,
+      qty: quantity,
+      price: book.price,
+      image: book.image,
+    }));
+    
+    setSelectedBook(null);
+    setQuantity(1);
+    alert("Đã thêm vào giỏ hàng!");
+  };
+
   return (
     <div className="home">
+      <Helmet>
+        <title>Trang chủ - UTEShop</title>
+      </Helmet>
+      
       <nav className="navbar">
         <div className="navbar-container">
           <Link to="/" className="navbar-brand">
@@ -41,12 +75,35 @@ function Home() {
           </Link>
           
           <div className="navbar-menu">
-            <Link to="/login" className="nav-btn btn-secondary">
-              Đăng nhập
+            <Link to="/cart" className="nav-btn btn-cart">
+              <FaShoppingCart /> Giỏ hàng ({cartItems.length})
             </Link>
-            <Link to="/register" className="nav-btn btn-primary">
-              Đăng ký
-            </Link>
+            
+            {user ? (
+              <>
+                {user.role === "admin" && (
+                  <Link to="/admin" className="nav-btn btn-admin">
+                    <FaCrown /> Admin
+                  </Link>
+                )}
+                <span className="user-name">{user.name}</span>
+                <Link to="/orders" className="nav-btn btn-info">
+                  <FaBox /> Đơn hàng
+                </Link>
+                <Link to="/profile" className="nav-btn btn-secondary">
+                  <FaUser /> Hồ sơ
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="nav-btn btn-secondary">
+                  Đăng nhập
+                </Link>
+                <Link to="/register" className="nav-btn btn-primary">
+                  Đăng ký
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -64,7 +121,7 @@ function Home() {
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
             <button type="submit" className="btn btn-primary">
-              Tìm kiếm
+              <FaSearch /> Tìm kiếm
             </button>
           </form>
         </div>
@@ -83,12 +140,8 @@ function Home() {
           ) : (
             <div className="products-grid">
               {books.map((book) => (
-                <Link
-                  to={`/book/${book._id}`}
-                  key={book._id}
-                  className="product-card-link"
-                >
-                  <div className="product-card">
+                <div key={book._id} className="product-card">
+                  <Link to={`/book/${book._id}`} className="product-card-link">
                     <div className="product-image">
                       <img
                         src={book.image}
@@ -116,13 +169,78 @@ function Home() {
                         )}
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                  
+                  <button 
+                    className={`btn btn-add-to-cart ${book.countInStock === 0 ? 'disabled' : ''}`}
+                    onClick={() => setSelectedBook(book)}
+                    disabled={book.countInStock === 0}
+                  >
+                    {book.countInStock === 0 ? 'Hết hàng' : '🛒 Thêm vào giỏ'}
+                  </button>
+                </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Add to Cart Modal */}
+      {selectedBook && (
+        <div className="modal-overlay" onClick={() => setSelectedBook(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal" onClick={() => setSelectedBook(null)}>
+              ×
+            </button>
+            <h3>{selectedBook.title}</h3>
+            <p className="modal-price">
+              Giá: {selectedBook.price.toLocaleString("vi-VN")} ₫
+            </p>
+            
+            <div className="quantity-section">
+              <label>Số lượng:</label>
+              <div className="qty-controls">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="qty-btn"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="qty-input"
+                  min="1"
+                  max={selectedBook.countInStock}
+                />
+                <button
+                  onClick={() => setQuantity(Math.min(selectedBook.countInStock, quantity + 1))}
+                  className="qty-btn"
+                >
+                  +
+                </button>
+              </div>
+              <p className="stock-info">Tồn kho: {selectedBook.countInStock}</p>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setSelectedBook(null)}
+              >
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleAddToCart(selectedBook)}
+              >
+                Thêm vào giỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="footer">
         <p>&copy; 2024 UTEShop. Tất cả quyền được bảo lưu.</p>

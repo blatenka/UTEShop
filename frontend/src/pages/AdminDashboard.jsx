@@ -1,0 +1,507 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllOrders, updateOrder, clearError } from "../redux/slices/orderSlice";
+import { getAllUsers, getAllBooks } from "../redux/axiosInstance";
+import "../styles/AdminDashboard.css";
+import { Helmet } from "react-helmet";
+import { FaBox, FaUsers, FaBook, FaChartBar } from "react-icons/fa";
+
+const getStatusLabel = (status) => {
+  const statusMap = {
+    1: { label: "Chờ xác nhận", color: "#ffc107" },
+    2: { label: "Đã xác nhận", color: "#17a2b8" },
+    3: { label: "Đang chuẩn bị", color: "#007bff" },
+    4: { label: "Đang giao hàng", color: "#e83e8c" },
+    5: { label: "Giao thành công", color: "#28a745" },
+    6: { label: "Đã hủy", color: "#dc3545" },
+  };
+  return statusMap[status] || { label: "Không xác định", color: "#999" };
+};
+
+function AdminDashboard() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { orders, loading: ordersLoading, error } = useSelector((state) => state.orders);
+
+  const [activeTab, setActiveTab] = useState("orders");
+  const [users, setUsers] = useState([]);
+  const [books, setBooks] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingBooks, setLoadingBooks] = useState(false);
+  const [selectedOrderForUpdate, setSelectedOrderForUpdate] = useState(null);
+  const [newStatus, setNewStatus] = useState(null);
+
+  // Check if user is admin
+  useEffect(() => {
+    if (!user || user.role !== "admin") {
+      navigate("/");
+      return;
+    }
+  }, [user, navigate]);
+
+  // Load data based on active tab
+  useEffect(() => {
+    if (user?.role === "admin") {
+      if (activeTab === "orders" && orders.length === 0) {
+        dispatch(fetchAllOrders());
+      } else if (activeTab === "users") {
+        loadUsers();
+      } else if (activeTab === "books") {
+        loadBooks();
+      }
+    }
+  }, [activeTab, user, dispatch, orders.length]);
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await getAllUsers();
+      setUsers(response);
+    } catch (error) {
+      console.error("Error loading users:", error);
+      alert("Lỗi tải danh sách users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const loadBooks = async () => {
+    setLoadingBooks(true);
+    try {
+      const response = await getAllBooks();
+      setBooks(response);
+    } catch (error) {
+      console.error("Error loading books:", error);
+      alert("Lỗi tải danh sách sách");
+    } finally {
+      setLoadingBooks(false);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    if (window.confirm("Xác nhận cập nhật trạng thái đơn hàng?")) {
+      try {
+        await dispatch(updateOrder({ orderId, status }));
+        setSelectedOrderForUpdate(null);
+        setNewStatus(null);
+        dispatch(fetchAllOrders());
+      } catch (error) {
+        console.error("Error updating order:", error);
+      }
+    }
+  };
+
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
+  return (
+    <div className="admin-dashboard-container">
+      <Helmet>
+        <title>Admin Dashboard - UTEShop</title>
+      </Helmet>
+
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-container">
+          <Link to="/" className="navbar-brand">
+            🛒 UTEShop Admin
+          </Link>
+          <div className="navbar-menu">
+            <span className="user-name">👑 {user?.name}</span>
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                navigate("/login");
+              }}
+              className="nav-btn btn-secondary"
+            >
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="admin-content">
+        <div className="container">
+          <h1 className="admin-title">Bảng điều khiển Admin</h1>
+
+          {error && (
+            <div className="error-message">
+              {error}
+              <button onClick={() => dispatch(clearError())} className="close-btn">
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="admin-tabs">
+            <button
+              className={`tab-btn ${activeTab === "orders" ? "active" : ""}`}
+              onClick={() => setActiveTab("orders")}
+            >
+              <FaBox /> Quản lý hoá đơn
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "users" ? "active" : ""}`}
+              onClick={() => setActiveTab("users")}
+            >
+              <FaUsers /> Quản lý người dùng
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "books" ? "active" : ""}`}
+              onClick={() => setActiveTab("books")}
+            >
+              <FaBook /> Quản lý sách
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="tab-content">
+            {/* Orders Tab */}
+            {activeTab === "orders" && (
+              <div className="tab-panel">
+                <h2>Danh sách hoá đơn</h2>
+                {ordersLoading && <div className="loading">Đang tải hoá đơn...</div>}
+                {!ordersLoading && orders.length === 0 && (
+                  <div className="empty-state">Không có hoá đơn nào</div>
+                )}
+                {!ordersLoading && orders.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Mã đơn</th>
+                          <th>Khách hàng</th>
+                          <th>Tổng tiền</th>
+                          <th>Trạng thái</th>
+                          <th>Ngày đặt</th>
+                          <th>Hành động</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map((order) => {
+                          const statusInfo = getStatusLabel(order.status);
+                          return (
+                            <tr key={order._id}>
+                              <td className="code">
+                                {order._id.slice(-8).toUpperCase()}
+                              </td>
+                              <td>{order.user?.name || "N/A"}</td>
+                              <td className="price">
+                                {order.totalPrice.toLocaleString("vi-VN")} đ
+                              </td>
+                              <td>
+                                <span
+                                  className="status-badge"
+                                  style={{ backgroundColor: statusInfo.color }}
+                                >
+                                  {statusInfo.label}
+                                </span>
+                              </td>
+                              <td>
+                                {new Date(order.createdAt).toLocaleDateString(
+                                  "vi-VN"
+                                )}
+                              </td>
+                              <td>
+                                <div className="action-buttons">
+                                  <button
+                                    className="btn-view"
+                                    onClick={() =>
+                                      setSelectedOrderForUpdate(
+                                        selectedOrderForUpdate === order._id
+                                          ? null
+                                          : order._id
+                                      )
+                                    }
+                                  >
+                                    {selectedOrderForUpdate === order._id
+                                      ? "▼"
+                                      : "▶"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* Order Details */}
+                    {selectedOrderForUpdate && (
+                      <div className="order-detail-panel">
+                        {orders.map((order) => {
+                          if (order._id !== selectedOrderForUpdate) return null;
+                          const statusInfo = getStatusLabel(order.status);
+
+                          return (
+                            <div key={order._id} className="detail-content">
+                              <h3>Chi tiết hoá đơn #{order._id.slice(-8).toUpperCase()}</h3>
+
+                              {/* Shipping Address */}
+                              <div className="detail-section">
+                                <h4>Thông tin giao hàng</h4>
+                                <p>
+                                  <strong>Người nhận:</strong>{" "}
+                                  {order.shippingAddress.fullName}
+                                </p>
+                                <p>
+                                  <strong>Địa chỉ:</strong>{" "}
+                                  {order.shippingAddress.address}
+                                </p>
+                                <p>
+                                  <strong>Thành phố:</strong>{" "}
+                                  {order.shippingAddress.city}
+                                </p>
+                                <p>
+                                  <strong>SĐT:</strong>{" "}
+                                  {order.shippingAddress.phone}
+                                </p>
+                              </div>
+
+                              {/* Order Items */}
+                              <div className="detail-section">
+                                <h4>Sản phẩm</h4>
+                                <table className="items-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Sách</th>
+                                      <th>Giá</th>
+                                      <th>SL</th>
+                                      <th>Thành tiền</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {order.orderItems.map((item, idx) => (
+                                      <tr key={idx}>
+                                        <td>{item.title}</td>
+                                        <td>
+                                          {item.price.toLocaleString(
+                                            "vi-VN"
+                                          )}{" "}
+                                          đ
+                                        </td>
+                                        <td>{item.qty}</td>
+                                        <td>
+                                          {(item.price * item.qty).toLocaleString(
+                                            "vi-VN"
+                                          )}{" "}
+                                          đ
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Status Update */}
+                              <div className="detail-section">
+                                <h4>Cập nhật trạng thái</h4>
+                                <div className="status-update">
+                                  <p>
+                                    <strong>Trạng thái hiện tại:</strong>{" "}
+                                    <span
+                                      className="status-badge"
+                                      style={{ backgroundColor: statusInfo.color }}
+                                    >
+                                      {statusInfo.label}
+                                    </span>
+                                  </p>
+                                  <div className="status-flow">
+                                    {order.status < 6 && order.status !== 5 && (
+                                      <>
+                                        {order.status < 2 && (
+                                          <button
+                                            className="btn btn-info"
+                                            onClick={() =>
+                                              handleUpdateOrderStatus(order._id, 2)
+                                            }
+                                          >
+                                            → Xác nhận đơn (Status 2)
+                                          </button>
+                                        )}
+                                        {order.status < 3 && order.status >= 2 && (
+                                          <button
+                                            className="btn btn-info"
+                                            onClick={() =>
+                                              handleUpdateOrderStatus(order._id, 3)
+                                            }
+                                          >
+                                            → Chuẩn bị hàng (Status 3)
+                                          </button>
+                                        )}
+                                        {order.status < 4 && order.status >= 3 && (
+                                          <button
+                                            className="btn btn-warning"
+                                            onClick={() =>
+                                              handleUpdateOrderStatus(order._id, 4)
+                                            }
+                                          >
+                                            → Giao cho shipper (Status 4)
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                    {order.status === 5 && (
+                                      <p className="success-text">
+                                        ✓ Đơn hàng đã hoàn tất
+                                      </p>
+                                    )}
+                                    {order.status === 6 && (
+                                      <p className="danger-text">
+                                        ✕ Đơn hàng đã bị hủy
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Payment Status */}
+                              <div className="detail-section">
+                                <h4>Thanh toán</h4>
+                                <p>
+                                  <strong>Phương thức:</strong>{" "}
+                                  {order.paymentMethod}
+                                </p>
+                                <p>
+                                  <strong>Trạng thái:</strong>{" "}
+                                  {order.isPaid ? (
+                                    <span className="badge-paid">
+                                      Đã thanh toán
+                                    </span>
+                                  ) : (
+                                    <span className="badge-unpaid">
+                                      Chưa thanh toán
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Users Tab */}
+            {activeTab === "users" && (
+              <div className="tab-panel">
+                <h2>Danh sách người dùng</h2>
+                {loadingUsers && <div className="loading">Đang tải người dùng...</div>}
+                {!loadingUsers && users.length === 0 && (
+                  <div className="empty-state">Không có người dùng nào</div>
+                )}
+                {!loadingUsers && users.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Tên</th>
+                          <th>Email</th>
+                          <th>Vai trò</th>
+                          <th>Ngày tạo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => (
+                          <tr key={u._id}>
+                            <td className="code">{u._id.slice(-8)}</td>
+                            <td>{u.name}</td>
+                            <td>{u.email}</td>
+                            <td>
+                              {u.role === "admin" ? (
+                                <span className="badge-admin">👑 Admin</span>
+                              ) : (
+                                <span className="badge-user">👤 User</span>
+                              )}
+                            </td>
+                            <td>
+                              {new Date(u.createdAt).toLocaleDateString(
+                                "vi-VN"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Books Tab */}
+            {activeTab === "books" && (
+              <div className="tab-panel">
+                <h2>Danh sách sách</h2>
+                {loadingBooks && <div className="loading">Đang tải sách...</div>}
+                {!loadingBooks && books.length === 0 && (
+                  <div className="empty-state">Không có sách nào</div>
+                )}
+                {!loadingBooks && books.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Hình ảnh</th>
+                          <th>Tiêu đề</th>
+                          <th>Tác giả</th>
+                          <th>Giá</th>
+                          <th>Tồn kho</th>
+                          <th>Đã bán</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {books.map((book) => (
+                          <tr key={book._id}>
+                            <td className="book-image">
+                              <img
+                                src={book.image}
+                                alt={book.title}
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://via.placeholder.com/60x90?text=No+Image";
+                                }}
+                              />
+                            </td>
+                            <td>{book.title}</td>
+                            <td>{book.author}</td>
+                            <td className="price">
+                              {book.price.toLocaleString("vi-VN")} đ
+                            </td>
+                            <td>
+                              <span
+                                className={`stock-badge ${
+                                  book.countInStock > 0
+                                    ? "in-stock"
+                                    : "out-of-stock"
+                                }`}
+                              >
+                                {book.countInStock}
+                              </span>
+                            </td>
+                            <td>{book.sold || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default AdminDashboard;

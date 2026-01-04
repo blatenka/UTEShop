@@ -2,6 +2,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { getBookById } from "../api";
 import "../styles/BookDetail.css";
+import { Helmet } from "react-helmet";
+import { FaArrowLeft, FaShoppingCart } from "react-icons/fa";
 
 function BookDetail() {
   const { id } = useParams();
@@ -86,6 +88,9 @@ function BookDetail() {
 
   return (
     <div className="book-detail">
+      <Helmet>
+        <title>{book.title} - UTEShop</title>
+      </Helmet>
       <nav className="navbar">
         <div className="navbar-container">
           <Link to="/" className="navbar-brand">
@@ -115,7 +120,7 @@ function BookDetail() {
       <div className="detail-container">
         <div className="container">
           <button className="back-btn" onClick={() => navigate(-1)}>
-            ← Quay lại
+            <FaArrowLeft /> Quay lại
           </button>
 
           <div className="detail-content">
@@ -190,7 +195,7 @@ function BookDetail() {
                 }`}
                 disabled={book.countInStock === 0}
               >
-                {book.countInStock > 0 ? "Thêm vào giỏ hàng" : "Hết hàng"}
+                {book.countInStock > 0 ? <><FaShoppingCart /> Thêm vào giỏ hàng</> : "Hết hàng"}
               </button>
             </div>
           </div>

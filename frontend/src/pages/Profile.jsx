@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getProfile, logout, clearError } from "../redux/slices/authSlice";
 import "../styles/Profile.css";
 import { Helmet } from "react-helmet";
+import { FaUser, FaSignOutAlt, FaBox } from "react-icons/fa";
 
 function Profile() {
   const navigate = useNavigate();
@@ -85,7 +86,7 @@ function Profile() {
               <h1 className="profile-name">{user?.name}</h1>
               <p className="profile-email">{user?.email}</p>
               <p className="profile-role">
-                {user?.role === "admin" ? "👑 Quản trị viên" : "👤 Khách hàng"}
+                {user?.role === "admin" ? "👑 Quản trị viên" : <><FaUser /> Khách hàng</>}
               </p>
             </div>
           </div>
@@ -124,7 +125,7 @@ function Profile() {
             <button className="btn btn-secondary">Chỉnh sửa hồ sơ</button>
             <button className="btn btn-secondary">Đổi mật khẩu</button>
             <button onClick={handleLogout} className="btn btn-danger">
-              Đăng xuất
+              <FaSignOutAlt /> Đăng xuất
             </button>
           </div>
         </div>
@@ -135,8 +136,8 @@ function Profile() {
             <span className="icon">🏠</span>
             <span className="text">Trang chủ</span>
           </Link>
-          <Link to="/" className="quick-link-card">
-            <span className="icon">📦</span>
+          <Link to="/orders" className="quick-link-card">
+            <span className="icon"><FaBox /></span>
             <span className="text">Đơn hàng</span>
           </Link>
           <Link to="/" className="quick-link-card">

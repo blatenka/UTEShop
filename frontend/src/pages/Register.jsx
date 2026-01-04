@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { requestOtp, register, clearError, clearSuccess } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
 import { Helmet} from "react-helmet";
+import { FaEye, FaEyeSlash, FaUserPlus } from "react-icons/fa";
 
 function Register() {
   const navigate = useNavigate();
@@ -194,7 +195,7 @@ function Register() {
                 className="show-password-btn"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? "Ẩn" : "Hiển"}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
@@ -217,14 +218,14 @@ function Register() {
                 className="show-password-btn"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                {showConfirmPassword ? "Ẩn" : "Hiển"}
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
 
           {otpRequested && (
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Đang đăng ký..." : "Đăng ký"}
+              <FaUserPlus /> {loading ? "Đang đăng ký..." : "Đăng ký"}
             </button>
           )}
 

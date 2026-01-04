@@ -9,6 +9,7 @@ import {
 } from "../redux/slices/authSlice";
 import "../styles/Auth.css";
 import { Helmet } from "react-helmet";
+import { FaEye, FaEyeSlash, FaLock } from "react-icons/fa";
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -214,7 +215,7 @@ function ForgotPassword() {
             </p>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Đang gửi..." : "Yêu cầu mã OTP"}
+              {loading ? "Đang gửi..." : <><FaLock /> Yêu cầu mã OTP</>}
             </button>
           </form>
         ) : (
@@ -252,7 +253,7 @@ function ForgotPassword() {
                   className="show-password-btn"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? "Ẩn" : "Hiển"}
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
             </div>
@@ -273,7 +274,7 @@ function ForgotPassword() {
                   className="show-password-btn"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? "Ẩn" : "Hiển"}
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
             </div>
@@ -315,7 +316,7 @@ function ForgotPassword() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
+              <FaLock /> {loading ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
             </button>
           </form>
         )}

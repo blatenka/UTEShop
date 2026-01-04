@@ -5,6 +5,7 @@ import { login, googleLogin, clearError, clearSuccess } from "../redux/slices/au
 import { GoogleLogin } from "@react-oauth/google";
 import "../styles/Auth.css";
 import { Helmet } from "react-helmet";
+import { FaEye, FaEyeSlash, FaSignInAlt } from "react-icons/fa";
 
 function Login() {
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ function Login() {
                 className="show-password-btn"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? "Ẩn" : "Hiển"}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
@@ -151,7 +152,7 @@ function Login() {
           </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+            <FaSignInAlt /> {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
