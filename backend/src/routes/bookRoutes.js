@@ -4,7 +4,8 @@ import {
     getBookById, 
     createBook, 
     updateBook, 
-    deleteBook 
+    deleteBook,
+    createBookReview
 } from '../controllers/bookController.js';
 import { verifyToken, isAdmin } from '../middlewares/auth.js';
 
@@ -18,5 +19,8 @@ router.get('/:id', getBookById);
 router.post('/', verifyToken, isAdmin, createBook);
 router.put('/:id', verifyToken, isAdmin, updateBook);
 router.delete('/:id', verifyToken, isAdmin, deleteBook);
+
+// Chỉ cần đã đăng nhập là có thể gọi (nhưng controller sẽ check đã mua hàng chưa)
+router.post('/:id/reviews', verifyToken, createBookReview);
 
 export default router;

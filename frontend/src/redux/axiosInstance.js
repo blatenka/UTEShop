@@ -144,4 +144,18 @@ export const getAllBooks = async () => {
   }
 };
 
+// Create book review
+export const createBookReview = async (bookId, { rating, comment }) => {
+  try {
+    const response = await apiClient.post(`/books/${bookId}/reviews`, {
+      rating: Number(rating),
+      comment,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating book review:', error);
+    throw error;
+  }
+};
+
 export default apiClient;

@@ -1,16 +1,25 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { getBookById } from "../api";
+import { createBookReview } from "../redux/axiosInstance";
 import "../styles/BookDetail.css";
 import { Helmet } from "react-helmet";
-import { FaArrowLeft, FaShoppingCart } from "react-icons/fa";
+import { FaArrowLeft, FaShoppingCart, FaStar, FaUser } from "react-icons/fa";
 
 function BookDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [hoverRating, setHoverRating] = useState(0);
 
   useEffect(() => {
     fetchBookDetails();
@@ -27,6 +36,46 @@ function BookDetail() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    
+    if (!user) {
+      alert("Vui lòng đăng nhập để bình luận");
+      navigate("/login");
+      return;
+    }
+
+    if (!comment.trim()) {
+      setReviewError("Vui lòng nhập nội dung bình luận");
+      return;
+    }
+
+    try {
+      setReviewLoading(true);
+      setReviewError("");
+      
+      await createBookReview(id, {
+        rating: Number(rating),
+        comment: comment.trim(),
+      });
+
+      setReviewSuccess("Cảm ơn bạn đã bình luận! Bình luận của bạn sẽ được hiển thị sau khi xác nhận.");
+      setComment("");
+      setRating(5);
+
+      // Reload book details to show new review
+      setTimeout(() => {
+        fetchBookDetails();
+        setReviewSuccess("");
+      }, 2000);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message;
+      setReviewError(errorMessage);
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -207,17 +256,102 @@ function BookDetail() {
             </div>
           </div>
 
+          {/* Review Form */}
+          <div className="review-form-section">
+            <h2>Chia sẻ bình luận của bạn</h2>
+            <form onSubmit={handleSubmitReview} className="review-form">
+              {reviewError && <div className="error-message">{reviewError}</div>}
+              {reviewSuccess && <div className="success-message">{reviewSuccess}</div>}
+
+              <div className="form-group">
+                <label>Đánh giá:</label>
+                <div className="rating-input">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`star-btn ${star <= (hoverRating || rating) ? "active" : ""}`}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      onClick={() => setRating(star)}
+                    >
+                      <FaStar />
+                    </button>
+                  ))}
+                  <span className="rating-text">
+                    {hoverRating || rating} / 5
+                  </span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="comment">Bình luận:</label>
+                <textarea
+                  id="comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Chia sẻ trải nghiệm của bạn về cuốn sách này..."
+                  rows="5"
+                  className="comment-textarea"
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={reviewLoading || !comment.trim()}
+              >
+                {reviewLoading ? "Đang gửi..." : "Gửi bình luận"}
+              </button>
+
+              {!user && (
+                <p className="login-prompt">
+                  <Link to="/login">Đăng nhập</Link> để bình luận
+                </p>
+              )}
+            </form>
+          </div>
+
+          {/* Reviews List */}
           {book.reviews && book.reviews.length > 0 && (
             <div className="reviews-section">
-              <h2>Đánh giá ({book.reviews.length})</h2>
+              <h2>Bình luận ({book.reviews.length})</h2>
+              <div className="reviews-stats">
+                <div className="avg-rating">
+                  <div className="avg-score">{book.rating?.toFixed(1) || 0}</div>
+                  <div className="avg-stars">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <FaStar
+                        key={star}
+                        className={star <= Math.round(book.rating) ? "star-fill" : "star-empty"}
+                      />
+                    ))}
+                  </div>
+                  <div className="avg-text">dựa trên {book.reviews.length} bình luận</div>
+                </div>
+              </div>
+
               <div className="reviews-list">
                 {book.reviews.map((review, index) => (
                   <div key={index} className="review-item">
                     <div className="review-header">
-                      <span className="review-name">{review.name}</span>
-                      <span className="review-rating">
-                        {"⭐".repeat(review.rating)}
-                      </span>
+                      <div className="reviewer-info">
+                        <div className="reviewer-avatar">
+                          <FaUser />
+                        </div>
+                        <div className="reviewer-details">
+                          <h4 className="reviewer-name">{review.name}</h4>
+                          <div className="review-rating">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <FaStar
+                                key={star}
+                                className={star <= review.rating ? "star-fill" : "star-empty"}
+                              />
+                            ))}
+                            <span className="rating-value">({review.rating}/5)</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <p className="review-comment">{review.comment}</p>
                   </div>

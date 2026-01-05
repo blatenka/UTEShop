@@ -1,4 +1,6 @@
 import Book from '../models/Book.js';
+import Order from '../models/Order.js';
+import User from '../models/User.js'
 
 // 1. Lấy danh sách tất cả sách (Public)
 // Có hỗ trợ tìm kiếm theo từ khóa ?keyword=...
@@ -102,5 +104,56 @@ export const deleteBook = async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ message: "Lỗi xóa sách" });
+    }
+};
+
+export const createBookReview = async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const bookId = req.params.id;
+
+        const book = await Book.findById(bookId);
+        if (!book) return res.status(404).json({ message: "Sách không tồn tại" });
+
+        // Tìm thông tin đầy đủ của User để lấy trường 'name'
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: "Người dùng không tồn tại" });
+
+        // Kiểm tra đã mua hàng chưa (Giữ nguyên logic cũ của bạn)
+        const hasBought = await Order.findOne({
+            user: req.user.id,
+            status: 5,
+            "orderItems.product": bookId
+        });
+
+        if (!hasBought) {
+            return res.status(400).json({ message: "Bạn cần mua và nhận hàng thành công mới được đánh giá." });
+        }
+
+        const alreadyReviewed = book.reviews.find(
+            (r) => r.user.toString() === req.user.id.toString()
+        );
+
+        if (alreadyReviewed) {
+            return res.status(400).json({ message: "Bạn đã đánh giá sản phẩm này rồi." });
+        }
+
+        // TẠO ĐỐI TƯỢNG REVIEW VỚI TÊN LẤY TỪ DB
+        const review = {
+            name: user.name, // Lấy tên từ object user vừa tìm được
+            rating: Number(rating),
+            comment,
+            user: req.user.id,
+        };
+
+        book.reviews.push(review);
+        book.numReviews = book.reviews.length;
+        book.rating = book.reviews.reduce((acc, item) => item.rating + acc, 0) / book.reviews.length;
+
+        await book.save();
+        res.status(201).json({ message: "Đã thêm đánh giá thành công!" });
+
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi hệ thống khi đánh giá: " + error.message });
     }
 };
