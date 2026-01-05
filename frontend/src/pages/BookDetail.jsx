@@ -1,19 +1,24 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getBookById } from "../api";
 import { createBookReview } from "../redux/axiosInstance";
+import { addToCart } from "../redux/slices/cartSlice";
+import { showToast } from "../utils/toast";
 import "../styles/BookDetail.css";
 import { Helmet } from "react-helmet";
-import { FaArrowLeft, FaShoppingCart, FaStar, FaUser } from "react-icons/fa";
+import { FaArrowLeft, FaShoppingCart, FaStar, FaUser, FaBox, FaCrown } from "react-icons/fa";
 
 function BookDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { cartItems } = useSelector((state) => state.cart);
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewSuccess, setReviewSuccess] = useState("");
@@ -33,7 +38,7 @@ function BookDetail() {
       setError(null);
     } catch (err) {
       setError("Không thể tải chi tiết sách. Vui lòng thử lại.");
-      console.error(err);
+      showToast.error("Không thể tải chi tiết sách. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -43,13 +48,14 @@ function BookDetail() {
     e.preventDefault();
     
     if (!user) {
-      alert("Vui lòng đăng nhập để bình luận");
+      showToast.warning("Vui lòng đăng nhập để bình luận");
       navigate("/login");
       return;
     }
 
     if (!comment.trim()) {
       setReviewError("Vui lòng nhập nội dung bình luận");
+      showToast.error("Vui lòng nhập nội dung bình luận");
       return;
     }
 
@@ -63,6 +69,7 @@ function BookDetail() {
       });
 
       setReviewSuccess("Cảm ơn bạn đã bình luận! Bình luận của bạn sẽ được hiển thị sau khi xác nhận.");
+      showToast.success("Cảm ơn bạn đã bình luận! Bình luận sẽ được hiển thị sau khi xác nhận.");
       setComment("");
       setRating(5);
 
@@ -74,9 +81,28 @@ function BookDetail() {
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message;
       setReviewError(errorMessage);
+      showToast.error(errorMessage);
     } finally {
       setReviewLoading(false);
     }
+  };
+
+  const handleAddToCart = () => {
+    if (book.countInStock === 0) {
+      showToast.warning("Sách này đã hết hàng");
+      return;
+    }
+
+    dispatch(addToCart({
+      product: book._id,
+      title: book.title,
+      qty: quantity,
+      price: book.price,
+      image: book.image,
+    }));
+
+    setQuantity(1);
+    showToast.success("Đã thêm vào giỏ hàng!");
   };
 
   if (loading) {
@@ -87,13 +113,37 @@ function BookDetail() {
             <Link to="/" className="navbar-brand">
               🛒 UTEShop
             </Link>
+            
             <div className="navbar-menu">
-              <Link to="/login" className="nav-btn btn-secondary">
-                Đăng nhập
+              <Link to="/cart" className="nav-btn btn-cart">
+                <FaShoppingCart /> Giỏ hàng ({cartItems.length})
               </Link>
-              <Link to="/register" className="nav-btn btn-primary">
-                Đăng ký
-              </Link>
+              
+              {user ? (
+                <>
+                  {user.role === "admin" && (
+                    <Link to="/admin" className="nav-btn btn-admin">
+                      <FaCrown /> Admin
+                    </Link>
+                  )}
+                  <span className="user-name">{user.name}</span>
+                  <Link to="/orders" className="nav-btn btn-info">
+                    <FaBox /> Đơn hàng
+                  </Link>
+                  <Link to="/profile" className="nav-btn btn-secondary">
+                    <FaUser /> Hồ sơ
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="nav-btn btn-secondary">
+                    Đăng nhập
+                  </Link>
+                  <Link to="/register" className="nav-btn btn-primary">
+                    Đăng ký
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </nav>
@@ -110,13 +160,37 @@ function BookDetail() {
             <Link to="/" className="navbar-brand">
               🛒 UTEShop
             </Link>
+            
             <div className="navbar-menu">
-              <Link to="/login" className="nav-btn btn-secondary">
-                Đăng nhập
+              <Link to="/cart" className="nav-btn btn-cart">
+                <FaShoppingCart /> Giỏ hàng ({cartItems.length})
               </Link>
-              <Link to="/register" className="nav-btn btn-primary">
-                Đăng ký
-              </Link>
+              
+              {user ? (
+                <>
+                  {user.role === "admin" && (
+                    <Link to="/admin" className="nav-btn btn-admin">
+                      <FaCrown /> Admin
+                    </Link>
+                  )}
+                  <span className="user-name">{user.name}</span>
+                  <Link to="/orders" className="nav-btn btn-info">
+                    <FaBox /> Đơn hàng
+                  </Link>
+                  <Link to="/profile" className="nav-btn btn-secondary">
+                    <FaUser /> Hồ sơ
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="nav-btn btn-secondary">
+                    Đăng nhập
+                  </Link>
+                  <Link to="/register" className="nav-btn btn-primary">
+                    Đăng ký
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </nav>
@@ -145,13 +219,37 @@ function BookDetail() {
           <Link to="/" className="navbar-brand">
             🛒 UTEShop
           </Link>
+          
           <div className="navbar-menu">
-            <Link to="/login" className="nav-btn btn-secondary">
-              Đăng nhập
+            <Link to="/cart" className="nav-btn btn-cart">
+              <FaShoppingCart /> Giỏ hàng ({cartItems.length})
             </Link>
-            <Link to="/register" className="nav-btn btn-primary">
-              Đăng ký
-            </Link>
+            
+            {user ? (
+              <>
+                {user.role === "admin" && (
+                  <Link to="/admin" className="nav-btn btn-admin">
+                    <FaCrown /> Admin
+                  </Link>
+                )}
+                <span className="user-name">{user.name}</span>
+                <Link to="/orders" className="nav-btn btn-info">
+                  <FaBox /> Đơn hàng
+                </Link>
+                <Link to="/profile" className="nav-btn btn-secondary">
+                  <FaUser /> Hồ sơ
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="nav-btn btn-secondary">
+                  Đăng nhập
+                </Link>
+                <Link to="/register" className="nav-btn btn-primary">
+                  Đăng ký
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -238,11 +336,24 @@ function BookDetail() {
                 <span>Lượt xem: {book.views}</span>
               </div>
 
+              <div className="quantity-section">
+                <label>Số lượng:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={book.countInStock}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="quantity-input"
+                />
+              </div>
+
               <button
                 className={`btn btn-large ${
                   book.countInStock > 0 ? "btn-primary" : "btn-disabled"
                 }`}
                 disabled={book.countInStock === 0}
+                onClick={handleAddToCart}
               >
                 {book.countInStock > 0 ? <><FaShoppingCart /> Thêm vào giỏ hàng</> : "Hết hàng"}
               </button>

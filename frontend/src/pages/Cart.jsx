@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { removeFromCart, updateQuantity, clearCart } from "../redux/slices/cartSlice";
 import { createNewOrder } from "../redux/slices/orderSlice";
+import { showToast } from "../utils/toast";
 import "../styles/Cart.css";
 import { Helmet } from "react-helmet";
 import { FaTrash, FaShoppingCart, FaMoneyBill, FaTruck } from "react-icons/fa";
@@ -52,23 +53,27 @@ function Cart() {
     // Validation
     if (!user) {
       setError("Vui lòng đăng nhập để tiếp tục");
+      showToast.warning("Vui lòng đăng nhập để tiếp tục");
       navigate("/login");
       return;
     }
 
     if (cartItems.length === 0) {
       setError("Giỏ hàng rỗng");
+      showToast.error("Giỏ hàng rỗng");
       return;
     }
 
     if (!shippingAddress.fullName || !shippingAddress.address || !shippingAddress.city || !shippingAddress.phone) {
       setError("Vui lòng điền đầy đủ thông tin giao hàng");
+      showToast.error("Vui lòng điền đầy đủ thông tin giao hàng");
       return;
     }
 
     const phoneRegex = /^[0-9]{10,11}$/;
     if (!phoneRegex.test(shippingAddress.phone)) {
       setError("Số điện thoại không hợp lệ");
+      showToast.error("Số điện thoại không hợp lệ");
       return;
     }
 
@@ -87,14 +92,14 @@ function Cart() {
       if (result.type === createNewOrder.fulfilled.type) {
         dispatch(clearCart());
         setShowCheckout(false);
-        alert("Đặt hàng thành công! Redirecting to orders...");
+        showToast.success("Đặt hàng thành công! Chuyển hướng tới đơn hàng...");
         setTimeout(() => {
           navigate("/orders");
         }, 1500);
       }
     } catch (err) {
       setError("Lỗi đặt hàng. Vui lòng thử lại.");
-      console.error(err);
+      showToast.error("Lỗi đặt hàng. Vui lòng thử lại.");
     }
   };
 

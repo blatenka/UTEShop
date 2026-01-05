@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getBooks } from "../api";
 import { addToCart } from "../redux/slices/cartSlice";
+import { showToast } from "../utils/toast";
 import "../styles/Home.css";
 import { Helmet } from "react-helmet";
 import { FaShoppingCart, FaCrown, FaBox, FaUser, FaSearch } from "react-icons/fa";
@@ -32,7 +33,7 @@ function Home() {
       setError(null);
     } catch (err) {
       setError("Không thể tải danh sách sách. Vui lòng thử lại.");
-      console.error(err);
+      showToast.error("Không thể tải danh sách sách. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ function Home() {
 
   const handleAddToCart = (book) => {
     if (book.countInStock === 0) {
-      alert("Sách này đã hết hàng");
+      showToast.warning("Sách này đã hết hàng");
       return;
     }
     
@@ -59,7 +60,7 @@ function Home() {
     
     setSelectedBook(null);
     setQuantity(1);
-    alert("Đã thêm vào giỏ hàng!");
+    showToast.success("Đã thêm vào giỏ hàng!");
   };
 
   return (

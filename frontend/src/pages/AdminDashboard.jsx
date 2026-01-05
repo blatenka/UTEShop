@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllOrders, updateOrder, clearError } from "../redux/slices/orderSlice";
 import { getAllUsers, getAllBooks } from "../redux/axiosInstance";
+import { showToast } from "../utils/toast";
 import "../styles/AdminDashboard.css";
 import { Helmet } from "react-helmet";
 import { FaBox, FaUsers, FaBook, FaChartBar } from "react-icons/fa";
@@ -59,9 +60,9 @@ function AdminDashboard() {
     try {
       const response = await getAllUsers();
       setUsers(response);
+      showToast.success("Tải danh sách người dùng thành công");
     } catch (error) {
-      console.error("Error loading users:", error);
-      alert("Lỗi tải danh sách users");
+      showToast.error("Lỗi tải danh sách người dùng");
     } finally {
       setLoadingUsers(false);
     }
@@ -72,9 +73,9 @@ function AdminDashboard() {
     try {
       const response = await getAllBooks();
       setBooks(response);
+      showToast.success("Tải danh sách sách thành công");
     } catch (error) {
-      console.error("Error loading books:", error);
-      alert("Lỗi tải danh sách sách");
+      showToast.error("Lỗi tải danh sách sách");
     } finally {
       setLoadingBooks(false);
     }
@@ -87,8 +88,9 @@ function AdminDashboard() {
         setSelectedOrderForUpdate(null);
         setNewStatus(null);
         dispatch(fetchAllOrders());
+        showToast.success("Cập nhật trạng thái đơn hàng thành công");
       } catch (error) {
-        console.error("Error updating order:", error);
+        showToast.error("Lỗi cập nhật trạng thái đơn hàng");
       }
     }
   };

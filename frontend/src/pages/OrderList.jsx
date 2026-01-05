@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserOrders, confirmReceived, cancelOrderAsync, clearError } from "../redux/slices/orderSlice";
+import { showToast } from "../utils/toast";
 import "../styles/OrderList.css";
 import { Helmet } from "react-helmet";
 import { FaBox, FaCheckCircle, FaTimes, FaTruck } from "react-icons/fa";
@@ -38,18 +39,20 @@ function OrderList() {
   const handleConfirmReceived = (orderId) => {
     if (window.confirm("Bạn xác nhận đã nhận được hàng?")) {
       dispatch(confirmReceived(orderId));
+      showToast.success("Xác nhận nhận hàng thành công!");
     }
   };
 
   const handleCancelOrder = (orderId) => {
     if (!cancelReason.trim()) {
-      alert("Vui lòng nhập lý do hủy");
+      showToast.error("Vui lòng nhập lý do hủy");
       return;
     }
     dispatch(cancelOrderAsync({ orderId, reason: cancelReason })).then(() => {
       setSelectedOrder(null);
       setCancelReason("");
       dispatch(fetchUserOrders());
+      showToast.success("Hủy đơn hàng thành công!");
     });
   };
 

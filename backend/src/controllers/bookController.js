@@ -25,6 +25,11 @@ export const getBooks = async (req, res) => {
 // 2. Lấy chi tiết 1 cuốn sách theo ID (Public)
 export const getBookById = async (req, res) => {
     try {
+        // Validate MongoDB ID format
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: "ID sách không hợp lệ" });
+        }
+        
         const book = await Book.findById(req.params.id);
         if (book) {
             // Tăng view mỗi khi xem chi tiết
@@ -36,7 +41,7 @@ export const getBookById = async (req, res) => {
             res.status(404).json({ message: "Không tìm thấy sách" });
         }
     } catch (error) {
-            res.status(404).json({ message: "Sách không tồn tại" });
+            res.status(500).json({ message: "Lỗi server: " + error.message });
     }
 };
 
