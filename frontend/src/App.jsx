@@ -11,6 +11,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import BookDetail from "./pages/BookDetail";
 import Cart from "./pages/Cart";
 import OrderList from "./pages/OrderList";
+import Wishlist from "./pages/Wishlist";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
@@ -21,11 +22,13 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/book/:id" element={<BookDetail />} />
+        <Route path="/books/:id" element={<BookDetail />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/orders" element={<OrderList />} />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>

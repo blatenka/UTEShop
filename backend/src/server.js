@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import bookRoutes from "./routes/bookRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js"
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // 3. Routes
 app.use("/api/auth", authRoutes); // Thêm tiền tố /api để đúng chuẩn RESTful
+app.use("/api/users", userRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/orders", orderRoutes);
 

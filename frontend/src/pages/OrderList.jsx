@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserOrders, confirmReceived, cancelOrderAsync, clearError } from "../redux/slices/orderSlice";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { showToast } from "../utils/toast";
 import "../styles/OrderList.css";
 import { Helmet } from "react-helmet";
@@ -27,6 +28,12 @@ function OrderList() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -37,10 +44,24 @@ function OrderList() {
   }, [user, navigate, dispatch]);
 
   const handleConfirmReceived = (orderId) => {
-    if (window.confirm("Bạn xác nhận đã nhận được hàng?")) {
-      dispatch(confirmReceived(orderId));
-      showToast.success("Xác nhận nhận hàng thành công!");
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Xác nhận nhận hàng",
+      message: "Bạn xác nhận đã nhận được hàng? Sau khi xác nhận, đơn hàng sẽ được hoàn tất.",
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          await dispatch(confirmReceived(orderId)).unwrap();
+          showToast.success("Cảm ơn bạn đã mua hàng! 🙏");
+          setTimeout(() => {
+            showToast.info("Vui lòng để lại bình luận để cải thiện dịch vụ của chúng tôi.");
+          }, 500);
+          dispatch(fetchUserOrders());
+        } catch (error) {
+          showToast.error(error || "Lỗi xác nhận nhận hàng");
+        }
+      },
+    });
   };
 
   const handleCancelOrder = (orderId) => {
@@ -194,7 +215,11 @@ function OrderList() {
                             <tbody>
                               {order.orderItems.map((item, idx) => (
                                 <tr key={idx}>
-                                  <td>{item.title}</td>
+                                  <td>
+                                    <Link to={`/books/${item.product}`} className="book-link">
+                                      {item.title}
+                                    </Link>
+                                  </td>
                                   <td>{item.price.toLocaleString("vi-VN")} đ</td>
                                   <td>{item.qty}</td>
                                   <td>
@@ -315,6 +340,16 @@ function OrderList() {
           )}
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        isDangerous={false}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+      />
     </div>
   );
 }

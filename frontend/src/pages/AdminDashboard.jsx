@@ -2,11 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllOrders, updateOrder, clearError } from "../redux/slices/orderSlice";
-import { getAllUsers, getAllBooks } from "../redux/axiosInstance";
+import { 
+  getAllBooks, 
+  getAllUsers, 
+  createBook as apiCreateBook,
+  updateBook as apiUpdateBook,
+  deleteBook as apiDeleteBook,
+  getCategories
+} from "../redux/axiosInstance";
+import BookForm from "../components/BookForm";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { showToast } from "../utils/toast";
 import "../styles/AdminDashboard.css";
 import { Helmet } from "react-helmet";
-import { FaBox, FaUsers, FaBook, FaChartBar } from "react-icons/fa";
+import { FaBox, FaUsers, FaBook, FaChartBar, FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 
 const getStatusLabel = (status) => {
   const statusMap = {
@@ -29,10 +38,23 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("orders");
   const [users, setUsers] = useState([]);
   const [books, setBooks] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingBooks, setLoadingBooks] = useState(false);
   const [selectedOrderForUpdate, setSelectedOrderForUpdate] = useState(null);
   const [newStatus, setNewStatus] = useState(null);
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [editingBook, setEditingBook] = useState(null);
+  const [loadingBookAction, setLoadingBookAction] = useState(false);
+
+  // Confirm Dialog states
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isDangerous: false,
+  });
 
   // Check if user is admin
   useEffect(() => {
@@ -44,24 +66,29 @@ function AdminDashboard() {
 
   // Load data based on active tab
   useEffect(() => {
-    if (user?.role === "admin") {
-      if (activeTab === "orders" && orders.length === 0) {
-        dispatch(fetchAllOrders());
-      } else if (activeTab === "users") {
-        loadUsers();
-      } else if (activeTab === "books") {
-        loadBooks();
-      }
-    }
-  }, [activeTab, user, dispatch, orders.length]);
+  if (!user || user.role !== "admin") return;
+
+  if (activeTab === "orders") {
+    dispatch(fetchAllOrders());
+  }
+
+  if (activeTab === "users") {
+    loadUsers();
+  }
+
+  if (activeTab === "books") {
+    loadBooks();
+  }
+}, [activeTab, user]);
 
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
       const response = await getAllUsers();
-      setUsers(response);
+      setUsers(Array.isArray(response) ? response : response.users || []);
       showToast.success("Tải danh sách người dùng thành công");
     } catch (error) {
+      console.error("Error loading users:", error);
       showToast.error("Lỗi tải danh sách người dùng");
     } finally {
       setLoadingUsers(false);
@@ -72,27 +99,130 @@ function AdminDashboard() {
     setLoadingBooks(true);
     try {
       const response = await getAllBooks();
-      setBooks(response);
+      setBooks(response.books || response.data?.books || []);
       showToast.success("Tải danh sách sách thành công");
     } catch (error) {
+      console.error("Error loading books:", error);
       showToast.error("Lỗi tải danh sách sách");
     } finally {
       setLoadingBooks(false);
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId, status) => {
-    if (window.confirm("Xác nhận cập nhật trạng thái đơn hàng?")) {
-      try {
-        await dispatch(updateOrder({ orderId, status }));
-        setSelectedOrderForUpdate(null);
-        setNewStatus(null);
-        dispatch(fetchAllOrders());
-        showToast.success("Cập nhật trạng thái đơn hàng thành công");
-      } catch (error) {
-        showToast.error("Lỗi cập nhật trạng thái đơn hàng");
-      }
+  const loadCategories = async () => {
+    try {
+      const response = await getCategories();
+      setCategories(response.categories || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
     }
+  };
+
+  const handleAddBook = () => {
+    setEditingBook(null);
+    loadCategories();
+    setShowBookForm(true);
+  };
+
+  const handleEditBook = (book) => {
+    setEditingBook(book);
+    loadCategories();
+    setShowBookForm(true);
+  };
+
+  const handleBookFormSubmit = async (formData, bookId) => {
+    setLoadingBookAction(true);
+    try {
+      if (bookId) {
+        // Update existing book
+        await apiUpdateBook(bookId, formData);
+        showToast.success("Cập nhật sách thành công");
+      } else {
+        // Create new book
+        await apiCreateBook(formData);
+        showToast.success("Thêm sách mới thành công");
+      }
+      loadBooks();
+    } catch (error) {
+      console.error("Error saving book:", error);
+      showToast.error(bookId ? "Lỗi cập nhật sách" : "Lỗi thêm sách");
+    } finally {
+      setLoadingBookAction(false);
+    }
+  };
+
+  const handleDeleteBook = async (bookId, bookTitle) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Xóa sách",
+      message: `Bạn có chắc chắn muốn xóa sách "${bookTitle}"? Hành động này không thể được hoàn tác.`,
+      isDangerous: true,
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        setLoadingBookAction(true);
+        try {
+          await apiDeleteBook(bookId);
+          showToast.success("Xóa sách thành công");
+          loadBooks();
+        } catch (error) {
+          console.error("Error deleting book:", error);
+          showToast.error("Lỗi xóa sách");
+        } finally {
+          setLoadingBookAction(false);
+        }
+      },
+    });
+  };
+
+  const handleUpdateOrderStatus = async (orderId, status) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Cập nhật trạng thái đơn hàng",
+      message: "Bạn có chắc chắn muốn cập nhật trạng thái đơn hàng này?",
+      isDangerous: false,
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          await dispatch(updateOrder({ orderId, status }));
+          setSelectedOrderForUpdate(null);
+          setNewStatus(null);
+          dispatch(fetchAllOrders());
+          showToast.success("Cập nhật trạng thái đơn hàng thành công");
+        } catch (error) {
+          showToast.error("Lỗi cập nhật trạng thái đơn hàng");
+        }
+      },
+    });
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Xóa người dùng",
+      message: `Bạn có chắc chắn muốn xóa người dùng "${userName}"? Hành động này không thể được hoàn tác.`,
+      isDangerous: true,
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        try {
+          const response = await fetch(`/api/users/${userId}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error("Lỗi xóa người dùng");
+          }
+          
+          loadUsers();
+          showToast.success("Xóa người dùng thành công");
+        } catch (error) {
+          console.error("Error deleting user:", error);
+          showToast.error("Lỗi xóa người dùng");
+        }
+      },
+    });
   };
 
   if (!user || user.role !== "admin") {
@@ -117,7 +247,7 @@ function AdminDashboard() {
               onClick={() => {
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
-                navigate("/login");
+                navigate("/");
               }}
               className="nav-btn btn-secondary"
             >
@@ -281,7 +411,11 @@ function AdminDashboard() {
                                   <tbody>
                                     {order.orderItems.map((item, idx) => (
                                       <tr key={idx}>
-                                        <td>{item.title}</td>
+                                        <td>
+                                          <Link to={`/books/${item.product}`} className="book-link">
+                                            {item.title}
+                                          </Link>
+                                        </td>
                                         <td>
                                           {item.price.toLocaleString(
                                             "vi-VN"
@@ -411,6 +545,7 @@ function AdminDashboard() {
                           <th>Email</th>
                           <th>Vai trò</th>
                           <th>Ngày tạo</th>
+                          <th>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -431,6 +566,17 @@ function AdminDashboard() {
                                 "vi-VN"
                               )}
                             </td>
+                            <td>
+                              {u.role !== "admin" && (
+                                <button
+                                  className="btn-delete"
+                                  onClick={() => handleDeleteUser(u._id, u.name)}
+                                  title="Xóa người dùng"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -443,7 +589,16 @@ function AdminDashboard() {
             {/* Books Tab */}
             {activeTab === "books" && (
               <div className="tab-panel">
-                <h2>Danh sách sách</h2>
+                <div className="tab-header">
+                  <h2>Danh sách sách</h2>
+                  <button 
+                    className="btn btn-primary btn-add"
+                    onClick={handleAddBook}
+                  >
+                    <FaPlus /> Thêm sách mới
+                  </button>
+                </div>
+
                 {loadingBooks && <div className="loading">Đang tải sách...</div>}
                 {!loadingBooks && books.length === 0 && (
                   <div className="empty-state">Không có sách nào</div>
@@ -459,6 +614,7 @@ function AdminDashboard() {
                           <th>Giá</th>
                           <th>Tồn kho</th>
                           <th>Đã bán</th>
+                          <th>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -491,6 +647,24 @@ function AdminDashboard() {
                               </span>
                             </td>
                             <td>{book.sold || 0}</td>
+                            <td className="actions">
+                              <button 
+                                className="btn-edit" 
+                                title="Chỉnh sửa"
+                                onClick={() => handleEditBook(book)}
+                                disabled={loadingBookAction}
+                              >
+                                <FaEdit /> Sửa
+                              </button>
+                              <button 
+                                className="btn-delete" 
+                                title="Xóa"
+                                onClick={() => handleDeleteBook(book._id, book.title)}
+                                disabled={loadingBookAction}
+                              >
+                                <FaTrash /> Xóa
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -502,6 +676,26 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Book Form Modal */}
+      {showBookForm && (
+        <BookForm
+          onClose={() => setShowBookForm(false)}
+          onSubmit={handleBookFormSubmit}
+          initialData={editingBook}
+          categories={categories}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        isDangerous={confirmDialog.isDangerous}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+      />
     </div>
   );
 }

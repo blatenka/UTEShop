@@ -18,6 +18,10 @@ const createApiClient = () => {
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      // Nếu là FormData, xóa Content-Type để browser tự tính
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
       return config;
     },
     (error) => Promise.reject(error)
@@ -30,7 +34,10 @@ const createApiClient = () => {
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Redirect to home page instead of login
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
       }
       return Promise.reject(error);
     }
@@ -122,24 +129,149 @@ export const cancelOrder = async (orderId, reason) => {
 
 // ========== USER APIS ==========
 
+// Get user profile
+export const getUserProfile = async () => {
+  try {
+    const response = await apiClient.get('/users/profile');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+// Update user profile
+export const updateUserProfile = async (profileData) => {
+  try {
+    const response = await apiClient.put('/users/profile', profileData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+// Update user avatar
+export const updateUserAvatar = async (formData) => {
+  try {
+    const response = await apiClient.put('/users/avatar', formData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating avatar:', error);
+    throw error;
+  }
+};
+
+// Change password
+export const changePassword = async (passwordData) => {
+  try {
+    const response = await apiClient.put('/users/change-password', passwordData);
+    return response.data;
+  } catch (error) {
+    console.error('Error changing password:', error);
+    throw error;
+  }
+};
+
+// Get all users (Admin only)
 export const getAllUsers = async () => {
   try {
-    const response = await apiClient.get('/users');
-    return response.data;
+    const response = await apiClient.get("/users/all");
+    return response.data.users;
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
   }
 };
 
+// ========== WISHLIST APIS ==========
+
+// Add to wishlist
+export const addToWishlist = async (bookId) => {
+  try {
+    const response = await apiClient.post('/users/wishlist/add', { id: bookId });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding to wishlist:', error);
+    throw error;
+  }
+};
+
+// Remove from wishlist
+export const removeFromWishlist = async (bookId) => {
+  try {
+    const response = await apiClient.delete(`/users/wishlist/${bookId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error removing from wishlist:', error);
+    throw error;
+  }
+};
+
+// Get my wishlist
+export const getMyWishlist = async () => {
+  try {
+    const response = await apiClient.get('/users/wishlist/my');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    throw error;
+  }
+};
+
 // ========== BOOK APIS ==========
 
+// Get categories
+export const getCategories = async () => {
+  try {
+    const response = await apiClient.get('/books/categories');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    throw error;
+  }
+};
+
+// Get all books (Admin)
 export const getAllBooks = async () => {
   try {
-    const response = await apiClient.get('/books');
+    const response = await apiClient.get('/books/admin/all');
     return response.data;
   } catch (error) {
     console.error('Error fetching books:', error);
+    throw error;
+  }
+};
+
+// Create book (Admin)
+export const createBook = async (bookData) => {
+  try {
+    const response = await apiClient.post('/books', bookData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating book:', error);
+    throw error;
+  }
+};
+
+// Update book (Admin)
+export const updateBook = async (bookId, bookData) => {
+  try {
+    const response = await apiClient.put(`/books/${bookId}`, bookData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating book:', error);
+    throw error;
+  }
+};
+
+// Delete book (Admin)
+export const deleteBook = async (bookId) => {
+  try {
+    const response = await apiClient.delete(`/books/${bookId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting book:', error);
     throw error;
   }
 };

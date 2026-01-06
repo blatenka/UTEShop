@@ -203,11 +203,14 @@ const orderSlice = createSlice({
       })
       .addCase(confirmReceived.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.userOrders.findIndex(o => o._id === action.payload.order._id);
-        if (index !== -1) {
-          state.userOrders[index] = action.payload.order;
+        // API trả về { message, order }
+        if (action.payload.order && action.payload.order._id) {
+          const index = state.userOrders.findIndex(o => o._id === action.payload.order._id);
+          if (index !== -1) {
+            state.userOrders[index] = action.payload.order;
+          }
         }
-        state.success = action.payload.message;
+        state.success = action.payload.message || 'Xác nhận nhận hàng thành công!';
       })
       .addCase(confirmReceived.rejected, (state, action) => {
         state.loading = false;

@@ -1,12 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getBooks } from "../api";
+import { getBooks, getHomeProducts, getCategories } from "../api";
 import { addToCart } from "../redux/slices/cartSlice";
 import { showToast } from "../utils/toast";
+import ProductCard from "../components/ProductCard";
 import "../styles/Home.css";
 import { Helmet } from "react-helmet";
-import { FaShoppingCart, FaCrown, FaBox, FaUser, FaSearch } from "react-icons/fa";
+import { FaShoppingCart, FaCrown, FaBox, FaUser, FaSearch, FaFire, FaEye } from "react-icons/fa";
 
 function Home() {
   const navigate = useNavigate();
@@ -15,33 +16,102 @@ function Home() {
   const { cartItems } = useSelector((state) => state.cart);
   
   const [books, setBooks] = useState([]);
+  const [allBooks, setAllBooks] = useState([]); // Tất cả sách cho lazy loading
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const [homeProducts, setHomeProducts] = useState({
+    newArrivals: [],
+    bestSellers: [],
+    topViewed: [],
+    hotDeals: []
+  });
   const [loading, setLoading] = useState(true);
+  const [loadingHome, setLoadingHome] = useState(true);
   const [error, setError] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [categories, setCategories] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const pageSize = 6; // 6 quyển 1 lần
 
   useEffect(() => {
-    fetchBooks();
+    fetchHomeProducts();
+    fetchAllBooks(1);
+    fetchCategories();
+    setIsSearching(false);
   }, []);
 
-  const fetchBooks = async (keyword = "") => {
+  const fetchCategories = async () => {
     try {
-      setLoading(true);
-      const data = await getBooks(keyword);
-      setBooks(data);
+      const data = await getCategories();
+      setCategories(data.categories || []);
+    } catch (err) {
+      console.error("Lỗi tải danh mục:", err);
+    }
+  };
+
+  const fetchAllBooks = async (page = 1) => {
+    try {
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
+      
+      const data = await getBooks(searchKeyword, page, selectedCategory);
+      
+      if (page === 1) {
+        setAllBooks(data.books || []);
+      } else {
+        setAllBooks(prev => [...prev, ...(data.books || [])]);
+      }
+      
+      setTotalPages(data.pages || 1);
+      setCurrentPage(page);
       setError(null);
     } catch (err) {
       setError("Không thể tải danh sách sách. Vui lòng thử lại.");
       showToast.error("Không thể tải danh sách sách. Vui lòng thử lại.");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const fetchHomeProducts = async () => {
+    try {
+      setLoadingHome(true);
+      const data = await getHomeProducts();
+      setHomeProducts(data);
+    } catch (err) {
+      console.error("Lỗi tải sản phẩm trang chủ:", err);
+    } finally {
+      setLoadingHome(false);
     }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchBooks(searchKeyword);
+    setIsSearching(true);
+    setAllBooks([]);
+    setCurrentPage(1);
+    fetchAllBooks(1);
+  };
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+    setIsSearching(true);
+    setAllBooks([]);
+    setCurrentPage(1);
+    // Fetch ngay khi đổi danh mục
+    setTimeout(() => fetchAllBooks(1), 0);
+  };
+
+  const handleLoadMore = () => {
+    if (currentPage < totalPages) {
+      fetchAllBooks(currentPage + 1);
+    }
   };
 
   const handleAddToCart = (book) => {
@@ -121,6 +191,16 @@ function Home() {
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
+            <select 
+              className="category-select"
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+            >
+              <option value="">Tất cả danh mục</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
             <button type="submit" className="btn btn-primary">
               <FaSearch /> Tìm kiếm
             </button>
@@ -128,60 +208,113 @@ function Home() {
         </div>
       </div>
 
+      {/* Featured Sections */}
+      {!loadingHome && !isSearching &&(
+        <>
+          {/* Hot Deals Section */}
+          {homeProducts.hotDeals.length > 0 && (
+            <div className="featured-section hot-deals">
+              <div className="container">
+                <div className="section-header">
+                  <h2><FaFire className="section-icon" /> Khuyến mãi hot</h2>
+                  <p>Giảm giá tới 50% cho những sản phẩm được chọn lọc</p>
+                </div>
+                <div className="products-grid">
+                  {homeProducts.hotDeals.map((book) => (
+                    <ProductCard key={book._id} book={book} onSelectBook={setSelectedBook} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New Arrivals Section */}
+          {homeProducts.newArrivals.length > 0 && (
+            <div className="featured-section new-arrivals">
+              <div className="container">
+                <div className="section-header">
+                  <h2>✨ Sản phẩm mới nhất</h2>
+                  <p>Những cuốn sách mới cập nhật hàng tuần</p>
+                </div>
+                <div className="products-grid">
+                  {homeProducts.newArrivals.map((book) => (
+                    <ProductCard key={book._id} book={book} onSelectBook={setSelectedBook} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top Viewed Section */}
+          {homeProducts.topViewed.length > 0 && (
+            <div className="featured-section top-viewed">
+              <div className="container">
+                <div className="section-header">
+                  <h2><FaEye className="section-icon" /> Sản phẩm xem nhiều nhất</h2>
+                  <p>Những sách được yêu thích nhất bởi cộng đồng</p>
+                </div>
+                <div className="products-grid">
+                  {homeProducts.topViewed.map((book) => (
+                    <ProductCard key={book._id} book={book} onSelectBook={setSelectedBook} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Best Sellers Section */}
+          {homeProducts.bestSellers.length > 0 && (
+            <div className="featured-section best-sellers">
+              <div className="container">
+                <div className="section-header">
+                  <h2>🏆 Bán chạy nhất</h2>
+                  <p>Những sách được mua nhiều nhất trên hệ thống</p>
+                </div>
+                <div className="products-grid">
+                  {homeProducts.bestSellers.map((book) => (
+                    <ProductCard key={book._id} book={book} onSelectBook={setSelectedBook} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div className="products-section">
         <div className="container">
-          <h2>Danh sách sách</h2>
+          <h2>📚 Tất cả sách</h2>
           
           {error && <div className="error-message">{error}</div>}
           
           {loading ? (
             <div className="loading">Đang tải sách...</div>
-          ) : books.length === 0 ? (
+          ) : allBooks.length === 0 ? (
             <div className="no-products">Không tìm thấy sách nào.</div>
           ) : (
-            <div className="products-grid">
-              {books.map((book) => (
-                <div key={book._id} className="product-card">
-                  <Link to={`/book/${book._id}`} className="product-card-link">
-                    <div className="product-image">
-                      <img
-                        src={book.image}
-                        alt={book.title}
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/200x300?text=No+Image";
-                        }}
-                      />
-                      {book.countInStock === 0 && (
-                        <div className="out-of-stock">Hết hàng</div>
-                      )}
-                    </div>
-                    <div className="product-info">
-                      <h3>{book.title}</h3>
-                      <p className="author">Tác giả: {book.author}</p>
-                      <div className="price-section">
-                        <span className="price">
-                          {book.price.toLocaleString("vi-VN")} ₫
-                        </span>
-                        {book.originalPrice > book.price && (
-                          <span className="original-price">
-                            {book.originalPrice.toLocaleString("vi-VN")} ₫
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                  
+            <>
+              <div className="products-grid">
+                {allBooks.map((book) => (
+                  <ProductCard 
+                    key={book._id} 
+                    book={book}
+                    onSelectBook={setSelectedBook}
+                  />
+                ))}
+              </div>
+              
+              {currentPage < totalPages && (
+                <div className="load-more-container">
                   <button 
-                    className={`btn btn-add-to-cart ${book.countInStock === 0 ? 'disabled' : ''}`}
-                    onClick={() => setSelectedBook(book)}
-                    disabled={book.countInStock === 0}
+                    className="btn btn-primary load-more-btn"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
                   >
-                    {book.countInStock === 0 ? 'Hết hàng' : '🛒 Thêm vào giỏ'}
+                    {loadingMore ? "Đang tải..." : "Tải thêm sách"}
                   </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -244,7 +377,7 @@ function Home() {
       )}
 
       <footer className="footer">
-        <p>&copy; 2024 UTEShop. Tất cả quyền được bảo lưu.</p>
+        <p>&copy; 2026 UTEBookShop - 22110223 - Bùi Lê Anh Tân</p>
       </footer>
     </div>
   );

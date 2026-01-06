@@ -1,13 +1,14 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { getBookById } from "../api";
-import { createBookReview } from "../redux/axiosInstance";
+import { getBookById, getRelatedBooks } from "../api";
+import { createBookReview, addToWishlist, removeFromWishlist, getMyWishlist } from "../redux/axiosInstance";
 import { addToCart } from "../redux/slices/cartSlice";
 import { showToast } from "../utils/toast";
+import ProductCard from "../components/ProductCard";
 import "../styles/BookDetail.css";
 import { Helmet } from "react-helmet";
-import { FaArrowLeft, FaShoppingCart, FaStar, FaUser, FaBox, FaCrown } from "react-icons/fa";
+import { FaArrowLeft, FaShoppingCart, FaStar, FaUser, FaBox, FaCrown, FaHeart } from "react-icons/fa";
 
 function BookDetail() {
   const { id } = useParams();
@@ -16,7 +17,9 @@ function BookDetail() {
   const { user } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
   const [book, setBook] = useState(null);
+  const [relatedBooks, setRelatedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRelated, setLoadingRelated] = useState(false);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -25,10 +28,18 @@ function BookDetail() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [hoverRating, setHoverRating] = useState(0);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   useEffect(() => {
     fetchBookDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (user) {
+      checkWishlistStatus();
+    }
+  }, [id, user]);
 
   const fetchBookDetails = async () => {
     try {
@@ -36,11 +47,62 @@ function BookDetail() {
       const data = await getBookById(id);
       setBook(data);
       setError(null);
+      
+      // Fetch related books
+      fetchRelatedBooks();
     } catch (err) {
       setError("Không thể tải chi tiết sách. Vui lòng thử lại.");
       showToast.error("Không thể tải chi tiết sách. Vui lòng thử lại.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRelatedBooks = async () => {
+    try {
+      setLoadingRelated(true);
+      const data = await getRelatedBooks(id);
+      setRelatedBooks(data || []);
+    } catch (err) {
+      console.error("Lỗi tải sách liên quan:", err);
+    } finally {
+      setLoadingRelated(false);
+    }
+  };
+
+  const checkWishlistStatus = async () => {
+    try {
+      const wishlist = await getMyWishlist();
+      const inWishlist = wishlist.some(item => item._id === id);
+      setIsInWishlist(inWishlist);
+    } catch (error) {
+      console.error("Error checking wishlist status:", error);
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      showToast.warning("Vui lòng đăng nhập để thêm vào danh sách yêu thích");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setWishlistLoading(true);
+      if (isInWishlist) {
+        await removeFromWishlist(id);
+        setIsInWishlist(false);
+        showToast.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await addToWishlist(id);
+        setIsInWishlist(true);
+        showToast.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      showToast.error("Lỗi cập nhật danh sách yêu thích");
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -357,6 +419,16 @@ function BookDetail() {
               >
                 {book.countInStock > 0 ? <><FaShoppingCart /> Thêm vào giỏ hàng</> : "Hết hàng"}
               </button>
+
+              <button
+                className={`btn btn-wishlist ${isInWishlist ? "in-wishlist" : ""}`}
+                disabled={wishlistLoading}
+                onClick={handleToggleWishlist}
+                title={isInWishlist ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+              >
+                <FaHeart className={isInWishlist ? "filled" : ""} /> 
+                {isInWishlist ? "Đã thêm yêu thích" : "Thêm yêu thích"}
+              </button>
             </div>
           </div>
 
@@ -473,8 +545,21 @@ function BookDetail() {
         </div>
       </div>
 
+      {/* Related Books Section */}
+      {relatedBooks.length > 0 && (
+        <div className="related-books-section">
+          <h2>📚 Sách liên quan</h2>
+          <p>Những sách khác cùng thể loại bạn có thể quan tâm</p>
+          <div className="related-books-grid">
+            {relatedBooks.map((book) => (
+              <ProductCard key={book._id} book={book} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <footer className="footer">
-        <p>&copy; 2024 UTEShop. Tất cả quyền được bảo lưu.</p>
+        <p>&copy; 2026 UTEBookShop - 22110223 - Bùi Lê Anh Tân</p>
       </footer>
     </div>
   );
