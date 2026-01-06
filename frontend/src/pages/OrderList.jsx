@@ -37,7 +37,7 @@ function OrderList() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/login");
+      navigate("/");
       return;
     }
     dispatch(fetchUserOrders());

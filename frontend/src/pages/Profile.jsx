@@ -25,6 +25,7 @@ function Profile() {
   const [activeTab, setActiveTab] = useState("info");
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -48,11 +49,11 @@ function Profile() {
 
   useEffect(() => {
     if (!token) {
-      navigate("/login");
+      navigate("/");
       return;
     }
     fetchProfileData();
-  }, [token]);
+  }, [token, navigate]);
 
   const fetchProfileData = async () => {
     try {
@@ -66,7 +67,15 @@ function Profile() {
         city: data.user.city || "",
       });
     } catch (error) {
-      showToast.error("Lỗi tải thông tin hồ sơ");
+      console.error("Fetch profile error:", error);
+      // Nếu 401, token không hợp lệ - redirect về home
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate("/");
+      } else {
+        showToast.error("Lỗi tải thông tin hồ sơ");
+      }
     } finally {
       setLoading(false);
     }
@@ -125,6 +134,7 @@ function Profile() {
     }
 
     try {
+      setAvatarUploading(true);
       const formDataToSend = new FormData();
       formDataToSend.append("avatar", avatarFile);
 
@@ -135,6 +145,8 @@ function Profile() {
       fetchProfileData();
     } catch (error) {
       showToast.error(error.response?.data?.message || "Lỗi upload avatar");
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -403,8 +415,12 @@ function Profile() {
 
                   {avatarFile && (
                     <div className="upload-actions">
-                      <button type="submit" className="btn btn-primary">
-                        Tải lên
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary"
+                        disabled={avatarUploading}
+                      >
+                        {avatarUploading ? "⏳ Đang xử lý..." : "Tải lên"}
                       </button>
                       <button
                         type="button"
@@ -413,6 +429,7 @@ function Profile() {
                           setAvatarFile(null);
                           setAvatarPreview(null);
                         }}
+                        disabled={avatarUploading}
                       >
                         Hủy
                       </button>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { requestOtp, register, clearError, clearSuccess } from "../redux/slices/authSlice";
+import { requestOtp, register, login, clearError, clearSuccess } from "../redux/slices/authSlice";
+import { showToast } from "../utils/toast";
 import "../styles/Auth.css";
 import { Helmet} from "react-helmet";
 import { FaEye, FaEyeSlash, FaUserPlus } from "react-icons/fa";
@@ -95,10 +96,17 @@ function Register() {
       })
     ).then((result) => {
       if (result.type === register.fulfilled.type) {
-        dispatch(clearSuccess());
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
+        // Auto-login sau register thành công
+        dispatch(login({
+          email: formData.email,
+          password: formData.password
+        })).then(() => {
+          dispatch(clearSuccess());
+          showToast.success("Đăng ký và đăng nhập thành công!");
+          setTimeout(() => {
+            navigate("/");
+          }, 1000);
+        });
       }
     });
   };

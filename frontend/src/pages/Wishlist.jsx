@@ -16,7 +16,7 @@ function Wishlist() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/login");
+      navigate("/");
       return;
     }
     loadWishlist();
@@ -29,7 +29,14 @@ function Wishlist() {
       setWishlistItems(items || []);
     } catch (error) {
       console.error("Error loading wishlist:", error);
-      showToast.error("Không thể tải danh sách yêu thích");
+      // Nếu 401, redirect về home
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate("/");
+      } else {
+        showToast.error("Không thể tải danh sách yêu thích");
+      }
     } finally {
       setLoading(false);
     }

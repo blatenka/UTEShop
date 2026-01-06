@@ -520,7 +520,11 @@ function BookDetail() {
                     <div className="review-header">
                       <div className="reviewer-info">
                         <div className="reviewer-avatar">
-                          <FaUser />
+                          {review.user?.avatar ? (
+                            <img src={review.user.avatar} alt={review.name} />
+                          ) : (
+                            <FaUser />
+                          )}
                         </div>
                         <div className="reviewer-details">
                           <h4 className="reviewer-name">{review.name}</h4>

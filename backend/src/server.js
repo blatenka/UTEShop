@@ -15,11 +15,10 @@ const app = express();
 // 2. Middlewares
 app.use(cors());
 app.use(express.json());
-// Nên thêm cái này để xử lý dữ liệu từ form submit nếu cần
 app.use(express.urlencoded({ extended: true })); 
 
 // 3. Routes
-app.use("/api/auth", authRoutes); // Thêm tiền tố /api để đúng chuẩn RESTful
+app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/orders", orderRoutes);
@@ -29,15 +28,15 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ute_booksh
 
 mongoose.connect(MONGO_URI)
   .then(() => {
-    console.log("✅ MongoDB connected successfully");
+    console.log("MongoDB connected successfully");
     
     // 5. Chỉ chạy server khi DB đã kết nối thành công
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`Server running at http://localhost:${PORT}`);
     });
   })
   .catch(err => {
-    console.error("❌ MongoDB connection error:", err.message);
+    console.error("MongoDB connection error:", err.message);
     process.exit(1); // Dừng app nếu không kết nối được DB
   });

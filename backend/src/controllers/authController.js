@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { generateOTP } from '../utils/otpGenerator.js';
+import { sendRegisterOtpEmail, sendForgotPasswordOtpEmail } from '../utils/emailService.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -24,12 +25,14 @@ export const requestOtp = async (req, res) => {
             { upsert: true, new: true }
         );
 
-        console.log("-----------------------------------------");
-        console.log(`[DEV MODE] OTP cho ${email} là: ${otpCode}`);
-        console.log(`Mã sẽ hết hạn sau ${process.env.OTP_EXPIRE_MINUTES} phút.`);
-        console.log("-----------------------------------------");
+        // Gửi email OTP
+        const emailSent = await sendRegisterOtpEmail(email, otpCode, process.env.OTP_EXPIRE_MINUTES);
 
-        res.status(200).json({ message: 'Mã OTP đã được tạo thành công' });
+        if (!emailSent) {
+            return res.status(500).json({ message: 'Lỗi gửi email. Vui lòng thử lại.' });
+        }
+
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn' });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server' });
     }
@@ -161,9 +164,12 @@ export const forgotPassword = async (req, res) => {
             { upsert: true, new: true }
         );
 
-        console.log("-----------------------------------------");
-        console.log(`[FORGOT PASSWORD] OTP cho ${email} là: ${otpCode}`);
-        console.log("-----------------------------------------");
+        // Gửi email OTP
+        const emailSent = await sendForgotPasswordOtpEmail(email, otpCode, process.env.OTP_EXPIRE_MINUTES);
+
+        if (!emailSent) {
+            return res.status(500).json({ message: 'Lỗi gửi email. Vui lòng thử lại.' });
+        }
 
         res.status(200).json({ message: 'Mã xác thực đã được gửi đến email của bạn.' });
     } catch (error) {

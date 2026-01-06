@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllOrders, updateOrder, clearError } from "../redux/slices/orderSlice";
+import { logout } from "../redux/slices/authSlice";
 import { 
   getAllBooks, 
   getAllUsers, 
   createBook as apiCreateBook,
   updateBook as apiUpdateBook,
   deleteBook as apiDeleteBook,
+  deleteUser as apiDeleteUser,
   getCategories
 } from "../redux/axiosInstance";
 import BookForm from "../components/BookForm";
@@ -89,7 +91,13 @@ function AdminDashboard() {
       showToast.success("Tải danh sách người dùng thành công");
     } catch (error) {
       console.error("Error loading users:", error);
-      showToast.error("Lỗi tải danh sách người dùng");
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate("/");
+      } else {
+        showToast.error("Lỗi tải danh sách người dùng");
+      }
     } finally {
       setLoadingUsers(false);
     }
@@ -103,7 +111,13 @@ function AdminDashboard() {
       showToast.success("Tải danh sách sách thành công");
     } catch (error) {
       console.error("Error loading books:", error);
-      showToast.error("Lỗi tải danh sách sách");
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate("/");
+      } else {
+        showToast.error("Lỗi tải danh sách sách");
+      }
     } finally {
       setLoadingBooks(false);
     }
@@ -204,17 +218,7 @@ function AdminDashboard() {
       onConfirm: async () => {
         setConfirmDialog({ ...confirmDialog, isOpen: false });
         try {
-          const response = await fetch(`/api/users/${userId}`, {
-            method: "DELETE",
-            headers: {
-              "Authorization": `Bearer ${localStorage.getItem("token")}`
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error("Lỗi xóa người dùng");
-          }
-          
+          await apiDeleteUser(userId);
           loadUsers();
           showToast.success("Xóa người dùng thành công");
         } catch (error) {
@@ -245,8 +249,7 @@ function AdminDashboard() {
             <span className="user-name">👑 {user?.name}</span>
             <button
               onClick={() => {
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
+                dispatch(logout());
                 navigate("/");
               }}
               className="nav-btn btn-secondary"

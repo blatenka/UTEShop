@@ -31,13 +31,10 @@ const createApiClient = () => {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
+      // Xóa token khi 401
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // Redirect to home page instead of login
-        if (window.location.pathname !== '/') {
-          window.location.href = '/';
-        }
       }
       return Promise.reject(error);
     }
@@ -47,6 +44,74 @@ const createApiClient = () => {
 };
 
 const apiClient = createApiClient();
+
+// ========== AUTH APIS ==========
+
+// Request OTP
+export const requestOtp = async (email) => {
+  try {
+    const response = await apiClient.post('/auth/request-otp', { email });
+    return response.data;
+  } catch (error) {
+    console.error('Error requesting OTP:', error);
+    throw error;
+  }
+};
+
+// Register
+export const register = async (userData) => {
+  try {
+    const response = await apiClient.post('/auth/register', userData);
+    return response.data;
+  } catch (error) {
+    console.error('Error registering:', error);
+    throw error;
+  }
+};
+
+// Login
+export const login = async (credentials) => {
+  try {
+    const response = await apiClient.post('/auth/login', credentials);
+    return response.data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    throw error;
+  }
+};
+
+// Forgot Password
+export const forgotPassword = async (email) => {
+  try {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    return response.data;
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    throw error;
+  }
+};
+
+// Reset Password
+export const resetPassword = async (resetData) => {
+  try {
+    const response = await apiClient.post('/auth/reset-password', resetData);
+    return response.data;
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    throw error;
+  }
+};
+
+// Google Login
+export const googleLogin = async (googleData) => {
+  try {
+    const response = await apiClient.post('/auth/google-login', googleData);
+    return response.data;
+  } catch (error) {
+    console.error('Error logging in with Google:', error);
+    throw error;
+  }
+};
 
 // ========== ORDER APIS ==========
 
@@ -123,6 +188,17 @@ export const cancelOrder = async (orderId, reason) => {
     return response.data;
   } catch (error) {
     console.error('Error canceling order:', error);
+    throw error;
+  }
+};
+
+// Delete user (Admin only)
+export const deleteUser = async (userId) => {
+  try {
+    const response = await apiClient.delete(`/users/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting user:', error);
     throw error;
   }
 };
@@ -286,6 +362,50 @@ export const createBookReview = async (bookId, { rating, comment }) => {
     return response.data;
   } catch (error) {
     console.error('Error creating book review:', error);
+    throw error;
+  }
+};
+
+// Get books (with search, filter, sort)
+export const getBooks = async (params) => {
+  try {
+    const response = await apiClient.get('/books', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching books:', error);
+    throw error;
+  }
+};
+
+// Get home products
+export const getHomeProducts = async () => {
+  try {
+    const response = await apiClient.get('/books/public/home-data');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching home products:', error);
+    throw error;
+  }
+};
+
+// Get book by ID
+export const getBookById = async (bookId) => {
+  try {
+    const response = await apiClient.get(`/books/${bookId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching book by ID:', error);
+    throw error;
+  }
+};
+
+// Get related books
+export const getRelatedBooks = async (bookId) => {
+  try {
+    const response = await apiClient.get(`/books/${bookId}/related`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching related books:', error);
     throw error;
   }
 };

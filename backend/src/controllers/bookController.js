@@ -70,7 +70,7 @@ export const getBookById = async (req, res) => {
             return res.status(400).json({ message: "ID sách không hợp lệ" });
         }
 
-        const book = await Book.findById(req.params.id);
+        const book = await Book.findById(req.params.id).populate('reviews.user', 'avatar name email');
         if (book) {
             // Tăng view mỗi khi xem chi tiết
             book.views = book.views + 1;
