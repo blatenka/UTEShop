@@ -52,7 +52,7 @@ Trước khi cài đặt, hãy đảm bảo máy của bạn có:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-repo/UTEShop.git
+git clone https://github.com/blatenka/UTEShop.git
 
 # Truy cập thư mục dự án
 cd UTEShop
